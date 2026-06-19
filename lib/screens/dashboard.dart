@@ -169,7 +169,7 @@ class BodyCompositionsDashboard extends StatelessWidget {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(FitMateTheme.radiusLg)),
                   ),
                   onPressed: (){
-                    // Navigator.push(context, MaterialPageRoute(builder: (_) => const BodyCompositionInputScreen()));
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const BodyCompositionInputScreen()));
                   },
                   icon: const Icon(Icons.add, color: Colors.white),
                   label: const Text('새 기록 추가', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white)),
