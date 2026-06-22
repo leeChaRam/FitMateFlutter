@@ -139,23 +139,67 @@ class BodyCompositionsDashboard extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
               child: Text('세부 지표', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: cs.onSurface)),
             ),
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              childAspectRatio: 1.6,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              mainAxisExtent: 8,
-              crossAxisSpacing: 8,
-              children: [
-                _buildMetricTile(context, '체중', '68.4 kg', '▼ 0.8', FitMateTheme.colorDanger),
-                _buildMetricTile(context, '근육량', '34.1 kg', '▲ 0.3', FitMateTheme.colorPositive),
-                _buildMetricTile(context, '체지방량', '14.6 kg', '▼ 1.1', FitMateTheme.colorDanger),
-                _buildMetricTile(context, '체지방률', '21.3 %', '▼ 1.2', FitMateTheme.colorDanger),
-                _buildMetricTile(context, 'BMI', '22.8', '정상 범위', cs.outline, isNeu: true),
-                _buildMetricTile(context, '기초대사량', '1,648 kcal', '▲ 12', FitMateTheme.colorPositive),
-              ],
+
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: 2,
+                childAspectRatio: 1.6, // 타일의 가로세로 비율 조정
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+                children: [
+                  _buildMetricTile(context, '체중', '68.4 kg', '▼ 0.8', FitMateTheme.colorDanger),
+                  _buildMetricTile(context, '근육량', '34.1 kg', '▲ 0.3', FitMateTheme.colorPositive),
+                  _buildMetricTile(context, '체지방량', '14.6 kg', '▼ 1.1', FitMateTheme.colorDanger),
+                  _buildMetricTile(context, '체지방률', '21.3 %', '▼ 1.2', FitMateTheme.colorDanger),
+                  _buildMetricTile(context, 'BMI', '22.8', '정상 범위', cs.outline, isNeu: true),
+                  _buildMetricTile(context, '기초대사량', '1,648 kcal', '▲ 12', FitMateTheme.colorPositive),
+                ],
+
+              ),
             ),
+
+            //측정 기록 헤더
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '측정 기록',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)
+                  ),
+                  TextButton(
+                    onPressed: () {}, 
+                    style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero),
+                    child: const Text(
+                      '전체 보기',
+                      style: TextStyle(fontSize: 14, color: FitMateTheme.colorPrimary, fontWeight: FontWeight.w500)
+                    )
+                  )
+                ],
+              ),
+            ),
+
+            //측정 기록 리스트 카드
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16.0),
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                borderRadius: BorderRadius.circular(FitMateTheme.radiusSm)
+              ),
+              child: Column(
+                children: [
+                  _buildHistoryRow(Colors.black, Colors.black, Colors.black, '28', '5월', '68.4', '34.1', '21.3', '▼ 0.8', '▲ 0.3'),
+                  _buildHistoryRow(Colors.black, Colors.black, Colors.black, '07', '5월', '69.2', '33.8', '22.5', '▼ 0.3', '▲ 0.1'),
+                  _buildHistoryRow(Colors.black, Colors.black, Colors.black, '14', '4월', '69.5', '33.7', '22.8', '', '', isFirst: true, isLast: true),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
 
             // 새 기록 추가 버튼(CTA)
             Padding(
@@ -261,6 +305,74 @@ class BodyCompositionsDashboard extends StatelessWidget {
           )
         ],
       ),
+    );
+  }
+
+  Widget _buildHistoryRow(Color fg, Color labelColor, Color borderColor, String day, String month, String weight, String muscle, String fatPercent,
+  String weightDelta, String muscleDelta, {bool isFirst = false, isLast = false}){
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        border: isLast
+          ? null
+          : Border(bottom: BorderSide(color: borderColor, width: 0.5),),
+      ),
+      child: Row(
+        children: [
+          //날짜영역
+          SizedBox(
+            width: 48,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(day, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: fg, height: 1.1),),
+                Text(month, style: TextStyle(fontSize: 11, color: labelColor)),
+              ],
+            ),
+          ),
+
+          const SizedBox(width: 8),
+
+          //핵심 지표 가로 영역 배열
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                _buildHistoryChip(labelColor, fg, '체중', weight),
+                const SizedBox(width: 16),
+                _buildHistoryChip(labelColor, fg, '근육', muscle),
+                const SizedBox(width: 16),
+                _buildHistoryChip(labelColor, fg, '체지방%', fatPercent),
+              ],
+            ),
+          ),
+          //증감 상태 영역
+          if(isFirst)
+            Text('첫 기록', style: TextStyle(fontSize: 11, color: labelColor))
+          else
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (weightDelta.isNotEmpty)
+                  Text(weightDelta, style: const TextStyle(fontSize: 12, fontWeight:FontWeight.w500, color: FitMateTheme.colorPositive)),
+                if (muscleDelta.isNotEmpty)
+                  Text(muscleDelta, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: FitMateTheme.colorDanger)),
+              ],
+            )
+        ],
+      ),
+    );
+  }
+
+  // 기록 내부의 지표 칩 빌더
+  Widget _buildHistoryChip(Color labelColor, Color fgColor, String label, String value){
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: TextStyle(fontSize: 11, color: labelColor)),
+        const SizedBox(height: 2),
+        Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w200, color: fgColor))
+      ],
     );
   }
 }
