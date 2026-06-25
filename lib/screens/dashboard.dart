@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fitmate_flutter/theme/FitMateTheme.dart';
 import 'package:fitmate_flutter/screens/input_screen.dart';
+import 'package:fitmate_flutter/services/api_service.dart';
+import 'package:fitmate_flutter/models/body_info.dart';
 
 class BodyCompositionsDashboard extends StatelessWidget {
   const BodyCompositionsDashboard({super.key});
@@ -8,6 +10,9 @@ class BodyCompositionsDashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    print("============= 대시보드 빌드 시작 완료! ============="); //
+    // StatelessWidget 내부에 API 서비스 인스턴스를 생성
+    final ApiService apiService = ApiService();
 
     return Scaffold(
       appBar: AppBar(
@@ -142,23 +147,41 @@ class BodyCompositionsDashboard extends StatelessWidget {
 
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                childAspectRatio: 1.6, // 타일의 가로세로 비율 조정
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 10,
-                children: [
-                  _buildMetricTile(context, '체중', '68.4 kg', '▼ 0.8', FitMateTheme.colorDanger),
-                  _buildMetricTile(context, '근육량', '34.1 kg', '▲ 0.3', FitMateTheme.colorPositive),
-                  _buildMetricTile(context, '체지방량', '14.6 kg', '▼ 1.1', FitMateTheme.colorDanger),
-                  _buildMetricTile(context, '체지방률', '21.3 %', '▼ 1.2', FitMateTheme.colorDanger),
-                  _buildMetricTile(context, 'BMI', '22.8', '정상 범위', cs.outline, isNeu: true),
-                  _buildMetricTile(context, '기초대사량', '1,648 kcal', '▲ 12', FitMateTheme.colorPositive),
-                ],
+              // GridView를 FutureBuilder로 감싸서 백엔드 데이터를 주입
+              child: FutureBuilder<List<BodyInfoModel>>(
+                future: apiService.getRescentBodyInfos(1),
+                builder: (context, snapshot){
+                  // 로딩 중이거나 데이터가 없을 때 보여줄 기본 임시 텍스트/공백 처리 
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const SizedBox(height: 100, child: Center(child:CircularProgressIndicator()));
+                  } else if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const SizedBox(height: 50, child: Center(child: Text('최신 측정 데이터가 없습나다.', style: TextStyle(color: Colors.grey))));
+                  }
 
-              ),
+                  // 서버에서 받아온 리스트 중 가장 최신 데이터(0번째)를 가져오기 
+                  final latestInfo = snapshot.data!.first;
+
+                  return GridView.count(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisCount: 2,
+                    childAspectRatio: 1.6, // 타일의 가로세로 비율 조정
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                    children:[
+                      // 실제 백엔드에서 받아온 최신값(latestInfo)을 주입
+                      _buildMetricTile(context, '체중', '${latestInfo.weight} kg', '▼ 0.8', FitMateTheme.colorDanger),
+                      _buildMetricTile(context, '근육량', '${latestInfo.muscleMass ?? "-"} kg', '▲ 0.3', FitMateTheme.colorPositive),
+                      _buildMetricTile(context, '체지방량', '${latestInfo.fatMass ?? "-"} kg', '▼ 1.1', FitMateTheme.colorDanger),
+                      
+                      // 💡 체지방률, BMI, 기초대사량은 현재 백엔드 엔티티에 없으므로, 수식이 완성되기 전까지 우선 기존 더미를 유지하거나 가공합니다.
+                      _buildMetricTile(context, '체지방률', '21.3 %', '▼ 1.2', FitMateTheme.colorDanger),
+                      _buildMetricTile(context, 'BMI', '22.8', '정상 범위', cs.outline, isNeu: true),
+                      _buildMetricTile(context, '기초대사량', '1,648 kcal', '▲ 12', FitMateTheme.colorPositive),
+                    ],
+                  );
+                }
+              )
             ),
 
             //측정 기록 헤더
@@ -192,9 +215,9 @@ class BodyCompositionsDashboard extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  _buildHistoryRow(Colors.black, Colors.black, Colors.black, '28', '5월', '68.4', '34.1', '21.3', '▼ 0.8', '▲ 0.3'),
-                  _buildHistoryRow(Colors.black, Colors.black, Colors.black, '07', '5월', '69.2', '33.8', '22.5', '▼ 0.3', '▲ 0.1'),
-                  _buildHistoryRow(Colors.black, Colors.black, Colors.black, '14', '4월', '69.5', '33.7', '22.8', '', '', isFirst: true, isLast: true),
+                  _buildHistoryRow(Colors.black, Colors.grey, Colors.black54, '28', '5월', '68.4', '34.1', '21.3', '▼ 0.8', '▲ 0.3'),
+                  _buildHistoryRow(Colors.black, Colors.grey, Colors.black54, '07', '5월', '69.2', '33.8', '22.5', '▼ 0.3', '▲ 0.1'),
+                  _buildHistoryRow(Colors.black, Colors.grey, Colors.black54, '14', '4월', '69.5', '33.7', '22.8', '', '', isFirst: true, isLast: true),
                 ],
               ),
             ),
@@ -369,9 +392,9 @@ class BodyCompositionsDashboard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(fontSize: 11, color: labelColor)),
+        Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: labelColor)),
         const SizedBox(height: 2),
-        Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w200, color: fgColor))
+        Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: fgColor))
       ],
     );
   }
