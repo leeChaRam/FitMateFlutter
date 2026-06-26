@@ -27,56 +27,69 @@ class BodyCompositionsDashboard extends StatelessWidget {
           const SizedBox(width: 8),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.only(bottom: 40),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 최신 측정 요약 그라데이션 카드 
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [FitMateTheme.colorPrimary, Color(0xff6541F2)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius:  BorderRadius.circular(FitMateTheme.radiusLg),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('최근 측정 · 2025.05.28', style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.75), fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 4),
-                    Row(
-                      // alignment: Alignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        const Text('68.4', style: TextStyle(fontSize: 42, fontWeight: FontWeight.w900, color: Colors.white)),
-                        const Text('kg', style: TextStyle(fontSize: 16, color: Colors.white70)),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                          decoration: BoxDecoration(color: const Color(0x4000BF40), borderRadius: BorderRadius.circular(99)),
-                          child: const Text('▼ 0.8 kg', style: TextStyle(fontSize: 13, color: Color(0xff7DF5A5), fontWeight: FontWeight.w600)),
-                        )
-                      ],
+      // 1. 대시보드 통합 API 한번만 수행 
+      body: FutureBuilder<List<BodyInfoModel>>(
+        future: apiService.getRescentBodyInfos(1),
+        builder: (context, snapshot){
+        // 로딩 중이거나 데이터가 없을 때 보여줄 기본 임시 텍스트/공백 처리 
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox(height: 100, child: Center(child:CircularProgressIndicator()));
+        } else if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+          return const SizedBox(height: 50, child: Center(child: Text('최신 측정 데이터가 없습나다.', style: TextStyle(color: Colors.grey))));
+        }
+        // 서버에서 받아온 리스트 중 가장 최신 데이터(0번째)를 가져오기 
+        final latestInfo = snapshot.data!.first;
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.only(bottom: 40),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 최신 측정 요약 그라데이션 카드 
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color.fromRGBO(0, 102, 255, 1), Color(0xff6541F2)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildSummaryItem('근육량', '34.1', 'kg'),
-                        _buildSummaryItem('체지방률', '21.3', '%'),
-                        _buildSummaryItem('BMI', '22.8', ''),
-                      ],
-                    )
-                  ],
+                    borderRadius:  BorderRadius.circular(FitMateTheme.radiusLg),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('최근 측정 · 2025.05.28', style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.75), fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 4),
+                      Row(
+                        // alignment: Alignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Text('${latestInfo.weight}', style: TextStyle(fontSize: 42, fontWeight: FontWeight.w900, color: Colors.white)),
+                          const Text('kg', style: TextStyle(fontSize: 16, color: Colors.white70)),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                            decoration: BoxDecoration(color: const Color(0x4000BF40), borderRadius: BorderRadius.circular(99)),
+                            child: const Text('▼ 0.7 kg', style: TextStyle(fontSize: 13, color: Color(0xff7DF5A5), fontWeight: FontWeight.w600)),
+                          )
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildSummaryItem('근육량', '${latestInfo.muscleMass ?? "-"}', 'kg'),
+                          _buildSummaryItem('체지방률', '${latestInfo.fatMass ?? "-"}', '%'),
+                          _buildSummaryItem('BMI', '22.8', ''),
+                        ],
+                      )
+                    ],
+                  ),
                 ),
               ),
-            ),
 
             // 변화 추이 차트 카드 
 
