@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:fitmate_flutter/models/body_info.dart';
+import 'package:fitmate_flutter/models/dashboard_response.dart';
 
 class ApiService{
   final Dio _dio = Dio(BaseOptions(
@@ -28,5 +29,13 @@ class ApiService{
     } catch (e) {
       throw Exception('데이터를 불러오는데 실패했습니다: $e');
     }
+  }
+
+  //Dashboard 데이터 가져오기 request
+  Future<DashboardResponse> getDashboard(int memberId) async {
+    final response = await _dio.get(
+      '/api/body-info/dashboard/',
+      queryParameters: {'memberId': memberId},);
+    return DashboardResponse.fromJson(response.data);
   }
 }

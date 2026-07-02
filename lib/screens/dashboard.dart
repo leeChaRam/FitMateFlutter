@@ -1,11 +1,28 @@
+import 'package:fitmate_flutter/models/dashboard_response.dart';
 import 'package:flutter/material.dart';
 import 'package:fitmate_flutter/theme/FitMateTheme.dart';
 import 'package:fitmate_flutter/screens/input_screen.dart';
 import 'package:fitmate_flutter/services/api_service.dart';
 import 'package:fitmate_flutter/models/body_info.dart';
 
-class BodyCompositionsDashboard extends StatelessWidget {
+class BodyCompositionsDashboard extends StatefulWidget {
   const BodyCompositionsDashboard({super.key});
+
+  @override
+  State<BodyCompositionsDashboard> createState() => _BodyCompositionsDashboardState();
+}
+  
+
+class _BodyCompositionsDashboardState extends State<BodyCompositionsDashboard> {
+  final ApiService apiService = ApiService();
+  late final Future<DashboardResponse> _futureDashboard;
+
+  @override
+  void initState() {
+    super.initState();
+    // 여기서 딱 한 번만 API 호출
+    _futureDashboard = apiService.getDashboard(1); // userId는 실제 값으로
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,68 +45,13 @@ class BodyCompositionsDashboard extends StatelessWidget {
         ],
       ),
       // 1. 대시보드 통합 API 한번만 수행 
-      body: FutureBuilder<List<BodyInfoModel>>(
-        future: apiService.getRescentBodyInfos(1),
-        builder: (context, snapshot){
-        // 로딩 중이거나 데이터가 없을 때 보여줄 기본 임시 텍스트/공백 처리 
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SizedBox(height: 100, child: Center(child:CircularProgressIndicator()));
-        } else if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
-          return const SizedBox(height: 50, child: Center(child: Text('최신 측정 데이터가 없습나다.', style: TextStyle(color: Colors.grey))));
-        }
-        // 서버에서 받아온 리스트 중 가장 최신 데이터(0번째)를 가져오기 
-        final latestInfo = snapshot.data!.first;
-
-        return SingleChildScrollView(
+      body: SingleChildScrollView(
           padding: const EdgeInsets.only(bottom: 40),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // 최신 측정 요약 그라데이션 카드 
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color.fromRGBO(0, 102, 255, 1), Color(0xff6541F2)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius:  BorderRadius.circular(FitMateTheme.radiusLg),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('최근 측정 · 2025.05.28', style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.75), fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 4),
-                      Row(
-                        // alignment: Alignment.baseline,
-                        textBaseline: TextBaseline.alphabetic,
-                        children: [
-                          Text('${latestInfo.weight}', style: TextStyle(fontSize: 42, fontWeight: FontWeight.w900, color: Colors.white)),
-                          const Text('kg', style: TextStyle(fontSize: 16, color: Colors.white70)),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                            decoration: BoxDecoration(color: const Color(0x4000BF40), borderRadius: BorderRadius.circular(99)),
-                            child: const Text('▼ 0.7 kg', style: TextStyle(fontSize: 13, color: Color(0xff7DF5A5), fontWeight: FontWeight.w600)),
-                          )
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _buildSummaryItem('근육량', '${latestInfo.muscleMass ?? "-"}', 'kg'),
-                          _buildSummaryItem('체지방률', '${latestInfo.fatMass ?? "-"}', '%'),
-                          _buildSummaryItem('BMI', '22.8', ''),
-                        ],
-                      )
-                    ],
-                  ),
-                ),
-              ),
+              // TopSummaryCard(data: data),
 
             // 변화 추이 차트 카드 
 
@@ -261,22 +223,6 @@ class BodyCompositionsDashboard extends StatelessWidget {
       ),
     );
   }
-  Widget _buildSummaryItem(String label, String value, String unit) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 11, color: Colors.white70)),
-        const SizedBox(height: 1),
-        RichText(
-          text: TextSpan(
-            text: value,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-            children: [TextSpan(text: ' $unit', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal, color: Colors.white70))],
-          ),
-        )
-      ],
-    );
-  }
 
   Widget _buildTabButton(String text, bool isActive) {
     return Container(
@@ -446,5 +392,73 @@ class ChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class TopSummaryCard extends StatelessWidget{
+  final data;
+  const TopSummaryCard({required this.data, Key? key})
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [FitMateTheme.colorPrimary, Color(0xff6541F2)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(FitMateTheme.radiusLg),
+        ),
+      child: Column(
+        crossAxisAlignment:  CrossAxisAlignment.start,
+        children: [
+          Text('최근 측정 · ' +data.measureDate, style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.75), fontWeight: FontWeight.w600)),
+          const SizedBox(height: 4),
+          Row(
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              const Text('58.4', style: TextStyle(fontSize: 42, fontWeight: FontWeight.w900, color: Colors.white)),
+              const Text('kg', style: TextStyle(fontSize: 16, color: Colors.white70)),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: BoxDecoration(color: const Color(0x4000BF40), borderRadius: BorderRadius.circular(99)),
+                child: const Text('▼ 0.7 kg', style: TextStyle(fontSize: 13, color: Color(0xff7DF5A5), fontWeight: FontWeight.w600)),
+              )
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildSummaryItem('근육량', '32.1', 'kg'),
+              _buildSummaryItem('체지방률', '15.1', '%'),
+              _buildSummaryItem('BMI', '22.8', ''),
+            ],
+          ),
+        ],
+      ),
+      ),
+    );
+  }
+  Widget _buildSummaryItem(String label, String value, String unit) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 11, color: Colors.white70)),
+        const SizedBox(height: 1),
+        RichText(
+          text: TextSpan(
+            text: value,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+            children: [TextSpan(text: ' $unit', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal, color: Colors.white70))],
+          ),
+        )
+      ],
+    );
+  }
 }
 
