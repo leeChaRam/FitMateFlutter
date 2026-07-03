@@ -7,7 +7,7 @@ class ApiService{
     // 💡 에뮬레이터면 10.0.2.2, 실기기(폰) 테스트나 웹이면 실제 백엔드 IP 주소를 적어주세요.
     baseUrl: 'http://localhost:8080', 
     connectTimeout: const Duration(seconds: 5),
-    receiveTimeout: const Duration(seconds: 3),
+    receiveTimeout: const Duration(seconds: 5),
   ));
 
   // 최근 체성분 기록 리스트 가져오기 리퀘스트
@@ -34,7 +34,7 @@ class ApiService{
   //Dashboard 데이터 가져오기 request
   Future<DashboardResponse> getDashboard(int memberId) async {
     final response = await _dio.get(
-      '/api/body-info/dashboard/',
+      '/api/body-info/dashboard',
       queryParameters: {'memberId': memberId},);
     return DashboardResponse.fromJson(response.data);
   }
