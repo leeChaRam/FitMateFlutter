@@ -47,14 +47,11 @@ class _BodyCompositionsDashboardState extends State<BodyCompositionsDashboard> {
         future: _futureDashboard,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            print("여기서문제인거지 2");
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError || !snapshot.hasData) {
-            print("여기서문제인거지 3");
             return Center(child: Text('데이터를 불러오지 못했습니다: ${snapshot.error}'));
           }
-          print("여기서문제인거지 4");
           final dashboard = snapshot.data!;
           return SingleChildScrollView(
             padding: const EdgeInsets.only(bottom: 40),
@@ -124,7 +121,6 @@ class _BodyCompositionsDashboardState extends State<BodyCompositionsDashboard> {
                             padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
                             child: Text('세부 지표', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: cs.onSurface)),
                           ),
-                          ////////////////////////////////////////////////////
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16.0),
                             child: GridView.count(
@@ -206,8 +202,6 @@ class _BodyCompositionsDashboardState extends State<BodyCompositionsDashboard> {
                               ),
                             ),
                           ),
-                  
-                          //////////////////////////////////////////////////////
 
                         ],
                       ),
@@ -268,26 +262,6 @@ class _BodyCompositionsDashboardState extends State<BodyCompositionsDashboard> {
     );
   }
 
-  Widget _buildMetricTile(BuildContext context, String label, String value, String delta, Color deltaColor, {bool isNeu = false}) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: Theme.of(context).cardColor, borderRadius: BorderRadius.circular(FitMateTheme.radiusMd)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-          Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(color: deltaColor.withOpacity(0.15), borderRadius: BorderRadius.circular(99)),
-            child: Text(delta, style: TextStyle(fontSize: 12, color: deltaColor, fontWeight: FontWeight.bold)),
-          )
-        ],
-      ),
-    );
-  }
 
   Widget _buildHistoryRow(Color fg, Color labelColor, Color borderColor, String day, String month, String weight, String muscle, String fatPercent,
   String weightDelta, String muscleDelta, {bool isFirst = false, isLast = false}){
@@ -425,7 +399,7 @@ class TopSummaryCard extends StatelessWidget{
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                 decoration: BoxDecoration(color: const Color(0x4000BF40), borderRadius: BorderRadius.circular(99)),
-                child: Text('${data.weightDelta} kg', style: TextStyle(fontSize: 13, color: Color(0xff7DF5A5), fontWeight: FontWeight.w600)),
+                child: Text('${data.weightDelta} kg', style: TextStyle(fontSize: 13, color: data.weightStatus.color, fontWeight: FontWeight.w600)),
               )
             ],
           ),
@@ -457,6 +431,59 @@ class TopSummaryCard extends StatelessWidget{
           ),
         )
       ],
+    );
+  }
+}
+
+class DetailMetricsGrid extends StatelessWidget{
+  final DashboardResponse data;
+  const DetailMetricsGrid({required this.data, super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: GridView.count(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        crossAxisCount: 2,
+        childAspectRatio: 1.6, // 타일의 가로세로 비율 조정
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        children:[
+          // 실제 백엔드에서 받아온 최신값(latestInfo)을 주입
+          _buildMetricTile(context, '체중', '${data.latestWeight} kg', '${data.weightDelta}', data.weightStatus),
+          _buildMetricTile(context, '근육량', '${data.latestMuscleMass?? "-"} kg', '${data.muscleDelta}', data.muscleStatus),
+          _buildMetricTile(context, '체지방량', '${data.latestFatMass ?? "-"} kg', '${data.fatDelta}', data.fatStatus),
+                                
+          // 💡 체지방률, BMI, 기초대사량은 현재 백엔드 엔티티에 없으므로, 수식이 완성되기 전까지 우선 기존 더미를 유지하거나 가공합니다.
+          _buildMetricTile(context, '체지방률', '21.3 %', '▼ 1.2', ChangeStatus.down),
+          _buildMetricTile(context, 'BMI', '22.8', '정상 범위', ChangeStatus.same, isNeu: true),
+          _buildMetricTile(context, '기초대사량', '1,648 kcal', '▲ 12', ChangeStatus.up),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetricTile(BuildContext context, String label, String value, String delta, ChangeStatus status, {bool isNeu = false}) {
+    final deltaColor = status.color;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: Theme.of(context).cardColor, borderRadius: BorderRadius.circular(FitMateTheme.radiusMd)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(color: deltaColor.withOpacity(0.15), borderRadius: BorderRadius.circular(99)),
+            child: Text(delta, style: TextStyle(fontSize: 12, color: deltaColor, fontWeight: FontWeight.bold)),
+          )
+        ],
+      ),
     );
   }
 }

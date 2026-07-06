@@ -1,3 +1,6 @@
+import 'package:flutter/material.dart';
+import 'package:fitmate_flutter/theme/FitMateTheme.dart';
+
 /// 측정치 증감 상태 (백엔드 0: 다운, 1: 변동없음, 2: 업)
 enum ChangeStatus {
   down,
@@ -26,6 +29,19 @@ enum ChangeStatus {
         return 2;
     }
   }
+}
+extension ChangeStatusColor on ChangeStatus {
+  Color get color {
+    switch (this){
+      case ChangeStatus.down:
+        return FitMateTheme.colorDanger;
+      case ChangeStatus.same:
+        return Colors.grey;
+      case ChangeStatus.up:
+        return FitMateTheme.colorPositive;
+    }
+  }
+
 }
 
 /// 대시보드 상단 요약 + 하단 히스토리를 함께 담는 응답 모델
