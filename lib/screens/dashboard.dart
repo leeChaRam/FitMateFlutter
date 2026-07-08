@@ -116,33 +116,13 @@ class _BodyCompositionsDashboardState extends State<BodyCompositionsDashboard> {
 
                           Container(height: 8, color: Theme.of(context).dividerColor),
 
-                          //세부 지표 타이틀 및 그리드
+                          // 세부 지표 타이틀 및 그리드
                           Padding(
                             padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
                             child: Text('세부 지표', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: cs.onSurface)),
                           ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                            child: GridView.count(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              crossAxisCount: 2,
-                              childAspectRatio: 1.6, // 타일의 가로세로 비율 조정
-                              mainAxisSpacing: 10,
-                              crossAxisSpacing: 10,
-                              children:[
-                                // 실제 백엔드에서 받아온 최신값(latestInfo)을 주입
-                                _buildMetricTile(context, '체중', '${dashboard.latestWeight} kg', '▼ 0.8', FitMateTheme.colorDanger),
-                                _buildMetricTile(context, '근육량', '${dashboard.latestMuscleMass?? "-"} kg', '▲ 0.3', FitMateTheme.colorPositive),
-                                _buildMetricTile(context, '체지방량', '${dashboard.latestFatMass ?? "-"} kg', '▼ 1.1', FitMateTheme.colorDanger),
-                                
-                                // 💡 체지방률, BMI, 기초대사량은 현재 백엔드 엔티티에 없으므로, 수식이 완성되기 전까지 우선 기존 더미를 유지하거나 가공합니다.
-                                _buildMetricTile(context, '체지방률', '21.3 %', '▼ 1.2', FitMateTheme.colorDanger),
-                                _buildMetricTile(context, 'BMI', '22.8', '정상 범위', cs.outline, isNeu: true),
-                                _buildMetricTile(context, '기초대사량', '1,648 kcal', '▲ 12', FitMateTheme.colorPositive),
-                              ],
-                            ),
-                          ),
+                          DetailMetricsGrid(data: dashboard),
+
                           //측정 기록 헤더
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -452,21 +432,19 @@ class DetailMetricsGrid extends StatelessWidget{
         crossAxisSpacing: 10,
         children:[
           // 실제 백엔드에서 받아온 최신값(latestInfo)을 주입
-          _buildMetricTile(context, '체중', '${data.latestWeight} kg', '${data.weightDelta}', data.weightStatus),
-          _buildMetricTile(context, '근육량', '${data.latestMuscleMass?? "-"} kg', '${data.muscleDelta}', data.muscleStatus),
-          _buildMetricTile(context, '체지방량', '${data.latestFatMass ?? "-"} kg', '${data.fatDelta}', data.fatStatus),
-                                
-          // 💡 체지방률, BMI, 기초대사량은 현재 백엔드 엔티티에 없으므로, 수식이 완성되기 전까지 우선 기존 더미를 유지하거나 가공합니다.
-          _buildMetricTile(context, '체지방률', '21.3 %', '▼ 1.2', ChangeStatus.down),
-          _buildMetricTile(context, 'BMI', '22.8', '정상 범위', ChangeStatus.same, isNeu: true),
-          _buildMetricTile(context, '기초대사량', '1,648 kcal', '▲ 12', ChangeStatus.up),
+          _buildMetricTile(context, '체중', '${data.latestWeight ?? "-"} kg', data.weightDelta ?? '', data.weightStatus.color),
+          _buildMetricTile(context, '근육량', '${data.latestMuscleMass ?? "-"} kg', data.muscleDelta ?? '', data.muscleStatus.color),
+          _buildMetricTile(context, '체지방량', '${data.latestFatMass ?? "-"} kg', data.fatDelta ?? '', data.fatStatus.color),
+          _buildMetricTile(context, '체지방률', '${data.fatPercentage ?? "-"} %', data.fatPercentageDelta ?? '', data.fatPercentageStatus.color),
+          // 💡 BMI는 증감이 아니라 범위 카테고리 → 배지에 라벨과 카테고리 색상 표시
+          _buildMetricTile(context, 'BMI', '${data.bmi ?? "-"}', data.bmiStatus.label, data.bmiStatus.color),
+          _buildMetricTile(context, '기초대사량', '${data.bmr ?? "-"} kcal', data.bmrDelta ?? '', data.bmrStatus.color),
         ],
       ),
     );
   }
 
-  Widget _buildMetricTile(BuildContext context, String label, String value, String delta, ChangeStatus status, {bool isNeu = false}) {
-    final deltaColor = status.color;
+  Widget _buildMetricTile(BuildContext context, String label, String value, String delta, Color deltaColor ) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(color: Theme.of(context).cardColor, borderRadius: BorderRadius.circular(FitMateTheme.radiusMd)),
