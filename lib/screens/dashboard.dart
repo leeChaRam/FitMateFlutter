@@ -146,20 +146,21 @@ class _BodyCompositionsDashboardState extends State<BodyCompositionsDashboard> {
                           ),
 
                           //측정 기록 리스트 카드
-                          Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 16.0),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).cardColor,
-                              borderRadius: BorderRadius.circular(FitMateTheme.radiusSm)
-                            ),
-                            child: Column(
-                              children: [
-                                _buildHistoryRow(Colors.black, Colors.grey, Colors.black54, '28', '5월', '68.4', '34.1', '21.3', '▼ 0.8', '▲ 0.3'),
-                                _buildHistoryRow(Colors.black, Colors.grey, Colors.black54, '07', '5월', '69.2', '33.8', '22.5', '▼ 0.3', '▲ 0.1'),
-                                _buildHistoryRow(Colors.black, Colors.grey, Colors.black54, '14', '4월', '69.5', '33.7', '22.8', '', '', isFirst: true, isLast: true),
-                              ],
-                            ),
-                          ),
+                          HistoryListCard(historyList: dashboard.historyList),
+                          // Container(
+                          //   margin: const EdgeInsets.symmetric(horizontal: 16.0),
+                          //   decoration: BoxDecoration(
+                          //     color: Theme.of(context).cardColor,
+                          //     borderRadius: BorderRadius.circular(FitMateTheme.radiusSm)
+                          //   ),
+                          //   child: Column(
+                          //     children: [
+                          //       _buildHistoryRow(Colors.black, Colors.grey, Colors.black54, '28', '5월', '68.4', '34.1', '21.3', '▼ 0.8', '▲ 0.3'),
+                          //       _buildHistoryRow(Colors.black, Colors.grey, Colors.black54, '07', '5월', '69.2', '33.8', '22.5', '▼ 0.3', '▲ 0.1'),
+                          //       _buildHistoryRow(Colors.black, Colors.grey, Colors.black54, '14', '4월', '69.5', '33.7', '22.8', '', '', isFirst: true, isLast: true),
+                          //     ],
+                          //   ),
+                          // ),
 
                           const SizedBox(height: 20),
 
@@ -379,7 +380,7 @@ class TopSummaryCard extends StatelessWidget{
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                 decoration: BoxDecoration(color: const Color(0x4000BF40), borderRadius: BorderRadius.circular(99)),
-                child: Text('${data.weightDelta} kg', style: TextStyle(fontSize: 13, color: data.weightStatus.color, fontWeight: FontWeight.w600)),
+                child: Text('${data.weightDelta} kg', style: TextStyle(fontSize: 13, color: data.weightStatus.colorFor(higherIsBetter: false), fontWeight: FontWeight.w600)),
               )
             ],
           ),
@@ -388,7 +389,7 @@ class TopSummaryCard extends StatelessWidget{
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _buildSummaryItem('근육량', '${data.latestMuscleMass ?? "-"}', 'kg'),
-              _buildSummaryItem('체지방률', '${data.latestFatMass ?? "-"}', '%'),
+              _buildSummaryItem('체지방률', '${data.fatPercentage ?? "-"}', '%'),
               _buildSummaryItem('BMI', '${data.bmi ?? "-"}', ''),
             ],
           ),
@@ -430,15 +431,13 @@ class DetailMetricsGrid extends StatelessWidget{
         childAspectRatio: 1.6, // 타일의 가로세로 비율 조정
         mainAxisSpacing: 10,
         crossAxisSpacing: 10,
-        children:[
-          // 실제 백엔드에서 받아온 최신값(latestInfo)을 주입
-          _buildMetricTile(context, '체중', '${data.latestWeight ?? "-"} kg', data.weightDelta ?? '', data.weightStatus.color),
-          _buildMetricTile(context, '근육량', '${data.latestMuscleMass ?? "-"} kg', data.muscleDelta ?? '', data.muscleStatus.color),
-          _buildMetricTile(context, '체지방량', '${data.latestFatMass ?? "-"} kg', data.fatDelta ?? '', data.fatStatus.color),
-          _buildMetricTile(context, '체지방률', '${data.fatPercentage ?? "-"} %', data.fatPercentageDelta ?? '', data.fatPercentageStatus.color),
-          // 💡 BMI는 증감이 아니라 범위 카테고리 → 배지에 라벨과 카테고리 색상 표시
+        children: [
+          _buildMetricTile(context, '체중', '${data.latestWeight ?? "-"} kg', data.weightDelta ?? '', data.weightStatus.colorFor(higherIsBetter: false)),
+          _buildMetricTile(context, '근육량', '${data.latestMuscleMass ?? "-"} kg', data.muscleDelta ?? '', data.muscleStatus.colorFor(higherIsBetter: true)),
+          _buildMetricTile(context, '체지방량', '${data.latestFatMass ?? "-"} kg', data.fatDelta ?? '', data.fatStatus.colorFor(higherIsBetter: false)),
+          _buildMetricTile(context, '체지방률', '${data.fatPercentage ?? "-"} %', data.fatPercentageDelta ?? '', data.fatPercentageStatus.colorFor(higherIsBetter: false)),
           _buildMetricTile(context, 'BMI', '${data.bmi ?? "-"}', data.bmiStatus.label, data.bmiStatus.color),
-          _buildMetricTile(context, '기초대사량', '${data.bmr ?? "-"} kcal', data.bmrDelta ?? '', data.bmrStatus.color),
+          _buildMetricTile(context, '기초대사량', '${data.bmr ?? "-"} kcal', data.bmrDelta ?? '', data.bmrStatus.colorFor(higherIsBetter: true)),
         ],
       ),
     );
@@ -466,3 +465,158 @@ class DetailMetricsGrid extends StatelessWidget{
   }
 }
 
+// 측정 기록 리스트 카드
+class HistoryListCard extends StatelessWidget {
+  final List<BodyInfoHistory> historyList;
+  final int maxItems; // 최대 표시 개수 (기본 3개)
+  const HistoryListCard({
+    required this.historyList, 
+    this.maxItems = 3,
+    super.key
+    });
+
+  @override
+  Widget build(BuildContext context) {
+    if (historyList.isEmpty) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16.0),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(FitMateTheme.radiusSm),
+        ),
+        child: const Center(
+          child: Text('측정 기록이 없습니다.', style: TextStyle(color: Colors.grey)),
+        ),
+      );
+    }
+    final visibleList = historyList.take(maxItems).toList();
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16.0),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(FitMateTheme.radiusSm),
+      ),
+      child: Column(
+        children: List.generate(visibleList.length, (index){
+          final item = visibleList[index];
+          final isLast = index == visibleList.length -1;
+          // 리스트가 최신순 이므로 마지막 항목 가장 오래된 기록 = 첫기록
+          final isFistRecord = historyList.length <= maxItems && isLast;
+
+          return _HistoryRow(
+            item: item,
+            isFirst: isFistRecord,
+            isLast: isLast,
+          );
+        }),
+      )
+    );
+  }
+}
+
+class _HistoryRow extends StatelessWidget {
+  final BodyInfoHistory item;
+  final bool isFirst;
+  final bool isLast;
+
+  const _HistoryRow({
+    required this.item,
+    this.isFirst = false,
+    this.isLast = false,
+  });
+
+  // "2026-09-03" -> (day: "03", month: "7월")
+  (String, String) _parseDate(String? dateStr) {
+    if (dateStr == null) return ('-', '');
+    final date = DateTime.tryParse(dateStr);
+    if (date == null) return ('-', '');
+    return (date.day.toString().padLeft(2, '0'), '${date.month}월');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final (day, month) = _parseDate(item.measureDate);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        border: isLast
+          ? null
+          : Border(bottom: BorderSide(color: Theme.of(context).dividerColor, width: 0.5))
+      ),
+      child: Row(
+        children: [
+          // 날짜 영역
+          SizedBox(
+            width: 48,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(day, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: cs.onSurface, height: 1.1)),
+                Text(month, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+              ],
+            ),
+          ),
+
+          const SizedBox(width: 8),
+
+          // 핵심 지표 가로 배열
+          Expanded(
+            child: Row(
+              children: [
+                _buildHistoryChip(cs, '체중', '${item.weight ?? "-"}'),
+                const SizedBox(width: 16),
+                _buildHistoryChip(cs, '근육', '${item.muscleMass ?? "-"}'),
+                const SizedBox(width: 16),
+                _buildHistoryChip(cs, '체지방', '${item.fatMass ?? "-"}'),
+              ],
+            ),
+          ),
+
+          // 증감 상태 영역
+          if (isFirst)
+            const Text('첫 기록', style: TextStyle(fontSize: 11, color: Colors.grey))
+          else 
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if((item.weightDelta ?? '').isNotEmpty && item.weightDelta != '-')
+                  Text(
+                    item.weightDelta!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: item.weightStatus.colorFor(higherIsBetter: false),
+                    ),
+                  ),
+                if ((item.muscleDelta ?? '').isNotEmpty && item.muscleDelta != '-')
+                  Text(
+                    item.muscleDelta!,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: item.muscleStatus.colorFor(higherIsBetter: true),
+                    ),
+                  ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHistoryChip(ColorScheme cs, String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)),
+        const SizedBox(height: 2),
+        Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: cs.onSurface)),
+      ],
+    );
+  }
+
+}

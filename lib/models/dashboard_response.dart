@@ -31,14 +31,14 @@ enum ChangeStatus {
   }
 }
 extension ChangeStatusColor on ChangeStatus {
-  Color get color {
-    switch (this){
-      case ChangeStatus.down:
-        return FitMateTheme.colorDanger;
+  Color colorFor({required bool higherIsBetter}) {
+    switch (this) {
       case ChangeStatus.same:
         return Colors.grey;
+      case ChangeStatus.down:
+        return higherIsBetter ? FitMateTheme.colorDanger : FitMateTheme.colorPositive;
       case ChangeStatus.up:
-        return FitMateTheme.colorPositive;
+        return higherIsBetter ? FitMateTheme.colorPositive : FitMateTheme.colorDanger;
     }
   }
 }
