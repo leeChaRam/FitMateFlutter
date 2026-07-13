@@ -2,8 +2,58 @@ import 'package:flutter/material.dart';
 import 'package:fitmate_flutter/theme/FitMateTheme.dart';
 import 'package:fitmate_flutter/screens/privacy_sheet.dart';
 
-class BodyCompositionInputScreen extends StatelessWidget {
+class BodyCompositionInputScreen extends StatefulWidget {
   const BodyCompositionInputScreen({super.key});
+
+  @override
+  State<BodyCompositionInputScreen> createState() => _BodyCompositionInputScreenState();
+}
+
+class _BodyCompositionInputScreenState extends State<BodyCompositionInputScreen> {
+  // 선택된 날짜 상태 (기본값: 오늘)
+  DateTime _selectedDate = DateTime.now();
+
+  static const List<String> _weekdays = ['월', '화', '수', '목', '금', '토', '일'];
+
+  String get _formattedDate {
+    return '📅 ${_selectedDate.year}년 ${_selectedDate.month}월 ${_selectedDate.day}일';
+  }
+
+  String get _formattedSubLabel {
+    final weekday = _weekdays[_selectedDate.weekday - 1];
+    final now = DateTime.now();
+    final isToday = _selectedDate.year == now.year &&
+        _selectedDate.month == now.month &&
+        _selectedDate.day == now.day;
+    return isToday ? '$weekday요일 · 오늘' : '$weekday요일';
+  }
+
+  Future<void> _pickDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(now.year - 5), // 필요에 따라 조정 가능
+      lastDate: now, // 오늘 이후(미래) 날짜는 선택 불가
+      locale: const Locale('ko', 'KR'),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+                  primary: FitMateTheme.colorPrimary,
+                ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -13,15 +63,15 @@ class BodyCompositionInputScreen extends StatelessWidget {
       // Start AppBar ///
       appBar: AppBar(
         leading: TextButton(
-          onPressed: () => Navigator.pop(context), 
+          onPressed: () => Navigator.pop(context),
           child: const Text('취소', style: TextStyle(color: FitMateTheme.colorPrimary, fontSize: 16)),
         ),
         title: const Text('체성분 기록', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [
           TextButton(
-            onPressed: () {}, 
-            child: const Text('저장',style: TextStyle(color: FitMateTheme.colorPrimary, fontWeight: FontWeight.bold, fontSize: 16),)
+            onPressed: () {},
+            child: const Text('저장', style: TextStyle(color: FitMateTheme.colorPrimary, fontWeight: FontWeight.bold, fontSize: 16),)
           )
         ],
       ),
@@ -41,11 +91,11 @@ class BodyCompositionInputScreen extends StatelessWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('📅 2025년 5월 28일', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: cs.onSurface)),
-                      const Text('수요일 · 오늘', style: TextStyle(fontSize: 13, color: Colors.grey)),
+                      Text(_formattedDate, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: cs.onSurface)),
+                      Text(_formattedSubLabel, style: const TextStyle(fontSize: 13, color: Colors.grey)),
                     ],
                   ),
-                  TextButton(onPressed: () {}, child: const Text('변경', style: TextStyle(color: FitMateTheme.colorPrimary),))
+                  TextButton(onPressed: _pickDate, child: const Text('변경', style: TextStyle(color: FitMateTheme.colorPrimary),))
                 ],
               ),
             ),
@@ -83,7 +133,7 @@ class BodyCompositionInputScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            //하단 액션 버튼 
+            //하단 액션 버튼
             SizedBox(
               width: double.infinity,
               height: 50,
@@ -92,7 +142,7 @@ class BodyCompositionInputScreen extends StatelessWidget {
                   backgroundColor: FitMateTheme.colorPrimary,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadiusGeometry.circular(FitMateTheme.radiusLg)),
                 ),
-                onPressed: () {}, 
+                onPressed: () {},
                 child: const Text('기록 저장하기', style: TextStyle(fontSize: 17, color: Colors.white, fontWeight: FontWeight.bold),)
               ),
             )
@@ -100,8 +150,7 @@ class BodyCompositionInputScreen extends StatelessWidget {
         ),
       )
     );
-  
-}
+  }
 
   Widget _buildSectionTitle(String title){
     return Padding(
@@ -151,10 +200,10 @@ class BodyCompositionInputScreen extends StatelessWidget {
         ],
       ),
       onTap: (){
-        //체중 행 클릭 시 바텀 시트 호출 
+        //체중 행 클릭 시 바텀 시트 호출
         if(label == '체중'){
           showModalBottomSheet(
-            context: context, 
+            context: context,
             isScrollControlled: true,
             shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(FitMateTheme.radiusXl))),
             builder: (_) => const WeightPrivacyBottomSheet(),

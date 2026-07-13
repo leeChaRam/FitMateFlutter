@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'theme/FitMateTheme.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 // 대쉬보드 화면 import 
 import 'screens/dashboard.dart';
 
@@ -20,6 +21,16 @@ class FitMateApp extends StatelessWidget {
       themeMode: ThemeMode.system,
       home: const MainNavigationScreen(),
       debugShowCheckedModeBanner: false,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('ko', 'KR'),
+        Locale('en', 'US'),
+      ],
+      locale: const Locale('ko', 'KR'), 
     );
   }
 }
