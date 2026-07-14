@@ -38,4 +38,34 @@ class ApiService{
       queryParameters: {'memberId': memberId},);
     return DashboardResponse.fromJson(response.data);
   }
+
+  Future<void> postBodyInfo({
+    required int memberId,
+    required String measureDate, // yyyy-MM-dd
+    required double weight,
+    double? height,
+    double? muscleMass,
+    double? fatMass,
+    String? memo,
+  }) async {
+    try{
+      final response = await _dio.post(
+        '/api/body-info',
+        data: {
+          'memberId': memberId,
+          'measureDate': measureDate,
+          'weight': weight,
+          'height': height,
+          'muscleMass': muscleMass,
+          'fatMass': fatMass,
+          'memo': memo,
+        },  
+      );
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        throw Exception('서버 응답 에러: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('체성분 기록 저장에 실패했습니다: $e');
+    }
+  }
 }

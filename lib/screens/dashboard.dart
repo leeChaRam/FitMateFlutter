@@ -22,13 +22,19 @@ class BodyCompositionsDashboard extends StatefulWidget {
 
 class _BodyCompositionsDashboardState extends State<BodyCompositionsDashboard> {
   final ApiService apiService = ApiService();
-  late final Future<DashboardResponse> _futureDashboard;
+  late Future<DashboardResponse> _futureDashboard;
 
   @override
   void initState() {
     super.initState();
     // 여기서 딱 한 번만 API 호출
     _futureDashboard = apiService.getDashboard(1); // TODO: 실제 로그인 유저 id로 교체
+  }
+
+  void _refreshDashboard() {
+    setState(() {
+      _futureDashboard = apiService.getDashboard(1); // TODO: 실제 로그인 유저 id로 교체
+    });
   }
 
   @override
@@ -100,8 +106,18 @@ class _BodyCompositionsDashboardState extends State<BodyCompositionsDashboard> {
                         backgroundColor: FitMateTheme.colorPrimary,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(FitMateTheme.radiusLg)),
                       ),
-                      onPressed: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => const BodyCompositionInputScreen()));
+                      onPressed: () async {
+                        final result = await Navigator.push<bool>(
+                          context,
+                          MaterialPageRoute(builder: (_) => const BodyCompositionInputScreen()),
+                        );
+                        
+                        // 입력 화면에서 저장 성공(true)하고 돌아온 경우에만 새로고침
+                        // 사용자가 그냥 '취소'를 눌러서 돌아온 경우(result가 null)엔
+                        // 불필요한 API 재호출을 안하도록 막음
+                        if (result == true) {
+                          _refreshDashboard();
+                        }
                       },
                       icon: const Icon(Icons.add, color: Colors.white),
                       label: const Text('새 기록 추가', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white)),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fitmate_flutter/theme/FitMateTheme.dart';
 import 'package:fitmate_flutter/screens/privacy_sheet.dart';
+import 'package:fitmate_flutter/services/api_service.dart';
 
 class BodyCompositionInputScreen extends StatefulWidget {
   const BodyCompositionInputScreen({super.key});
@@ -10,14 +11,38 @@ class BodyCompositionInputScreen extends StatefulWidget {
 }
 
 class _BodyCompositionInputScreenState extends State<BodyCompositionInputScreen> {
+  final ApiService _apiService = ApiService();
+
+  // TODO: 로그인/전역 상태 연동되면 실제 로그인한 사용자의 memberId로 교체할 것
+  static const int _memberId = 1;
+
   // 선택된 날짜 상태 (기본값: 오늘)
   DateTime _selectedDate = DateTime.now();
+  
+  // 입력 필드 컨트롤러 (초기값 없이 비워둠)
+  final TextEditingController _weightController = TextEditingController();
+  final TextEditingController _heightController = TextEditingController();
+  final TextEditingController _muscleMassController = TextEditingController();
+  final TextEditingController _fatMassController = TextEditingController();
+
+  bool _isSaving = false;
 
   static const List<String> _weekdays = ['월', '화', '수', '목', '금', '토', '일'];
+
+  @override
+  void dispose() {
+    _weightController.dispose();
+    _heightController.dispose();
+    _muscleMassController.dispose();
+    _fatMassController.dispose();
+    super.dispose();
+  }
 
   String get _formattedDate {
     return '📅 ${_selectedDate.year}년 ${_selectedDate.month}월 ${_selectedDate.day}일';
   }
+
+  
 
   String get _formattedSubLabel {
     final weekday = _weekdays[_selectedDate.weekday - 1];
@@ -28,6 +53,14 @@ class _BodyCompositionInputScreenState extends State<BodyCompositionInputScreen>
     return isToday ? '$weekday요일 · 오늘' : '$weekday요일';
   }
 
+  // 서버로 보낼 날짜 포맷 (yyyy-MM-dd, LocalDate와 매칭)
+  String get _isoDate {
+    final y = _selectedDate.year.toString().padLeft(4, '0');
+    final m = _selectedDate.month.toString().padLeft(2, '0');
+    final d = _selectedDate.day.toString().padLeft(2, '0');
+    return '$y-$m-$d';
+  }
+
   Future<void> _pickDate() async {
     final now = DateTime.now();
     final picked = await showDatePicker(
@@ -35,7 +68,6 @@ class _BodyCompositionInputScreenState extends State<BodyCompositionInputScreen>
       initialDate: _selectedDate,
       firstDate: DateTime(now.year - 5), // 필요에 따라 조정 가능
       lastDate: now, // 오늘 이후(미래) 날짜는 선택 불가
-      locale: const Locale('ko', 'KR'),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -55,6 +87,48 @@ class _BodyCompositionInputScreenState extends State<BodyCompositionInputScreen>
     }
   }
 
+   void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  Future<void> _saveRecord() async {
+    // 숫자 파싱 (빈 칸이면 null 처리)
+    final weight = double.tryParse(_weightController.text.trim());
+    final height = double.tryParse(_heightController.text.trim());
+    final muscleMass = double.tryParse(_muscleMassController.text.trim());
+    final fatMass = double.tryParse(_fatMassController.text.trim());
+
+    // 체중은 필수 정보이므로 최소한의 검정 
+    if (weight == null) {
+      _showSnackBar('체중을 입력해주세요.');
+      return;
+    }
+
+    setState(() => _isSaving = true);
+
+    try{
+      await _apiService.postBodyInfo(
+        memberId: _memberId, 
+        measureDate: _isoDate, 
+        weight: weight,
+        height: height,
+        muscleMass: muscleMass,
+        fatMass: fatMass,
+      );
+
+      if(!mounted) return;
+      _showSnackBar('기록이 저장되었습니다.');
+      Navigator.pop(context, true);
+    } catch (e) {
+      if(!mounted) return;
+      _showSnackBar('저장에 실패했습니다. 다시 시동해주세요.');
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -70,7 +144,7 @@ class _BodyCompositionInputScreenState extends State<BodyCompositionInputScreen>
         centerTitle: true,
         actions: [
           TextButton(
-            onPressed: () {},
+            onPressed: _isSaving ? null : _saveRecord,
             child: const Text('저장', style: TextStyle(color: FitMateTheme.colorPrimary, fontWeight: FontWeight.bold, fontSize: 16),)
           )
         ],
@@ -102,7 +176,16 @@ class _BodyCompositionInputScreenState extends State<BodyCompositionInputScreen>
             const SizedBox(height: 16),
 
             _buildSectionTitle('필수 정보'),
-            _buildInputRow('⚖️', '체중', '68.4', 'kg'),
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(FitMateTheme.radiusLg)),
+              child: Column(
+                children: [
+                  _buildInputRow('⚖️', '체중', _weightController, 'kg'),
+                  _buildInputRow('📏', '키', _heightController, 'cm'),
+                ],
+              ),
+            ),
             const SizedBox(height: 16),
 
             _buildSectionTitle('체성분'),
@@ -111,9 +194,8 @@ class _BodyCompositionInputScreenState extends State<BodyCompositionInputScreen>
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(FitMateTheme.radiusLg)),
               child: Column(
                 children: [
-                  _buildInputRow('💪', '근육량', '34.1', 'kg'),
-                  _buildInputRow('🔥', '체지방량', '14.6', 'kg'),
-                  _buildInputRow('📊', '체지방률', '21.3', '%'),
+                  _buildInputRow('💪', '근육량', _muscleMassController, 'kg'),
+                  _buildInputRow('🔥', '체지방량', _fatMassController, 'kg'),
                 ],
               ),
             ),
@@ -142,8 +224,14 @@ class _BodyCompositionInputScreenState extends State<BodyCompositionInputScreen>
                   backgroundColor: FitMateTheme.colorPrimary,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadiusGeometry.circular(FitMateTheme.radiusLg)),
                 ),
-                onPressed: () {},
-                child: const Text('기록 저장하기', style: TextStyle(fontSize: 17, color: Colors.white, fontWeight: FontWeight.bold),)
+                onPressed: _isSaving ? null : _saveRecord,
+                child: _isSaving
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                      )
+                    : const Text('기록 저장하기', style: TextStyle(fontSize: 17, color: Colors.white, fontWeight: FontWeight.bold),)
               ),
             )
           ],
@@ -159,7 +247,7 @@ class _BodyCompositionInputScreenState extends State<BodyCompositionInputScreen>
     );
   }
 
-  Widget _buildInputRow(String emoji, String label, String value, String unit){
+  Widget _buildInputRow(String emoji, String label, TextEditingController controller, String unit){
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
@@ -171,11 +259,16 @@ class _BodyCompositionInputScreenState extends State<BodyCompositionInputScreen>
           SizedBox(
             width: 80,
             child: TextField(
-              controller: TextEditingController(text: value),
+              controller: controller,
               textAlign: TextAlign.right,
-              keyboardType: TextInputType.number,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
               style: const TextStyle(color: FitMateTheme.colorPrimary, fontWeight: FontWeight.bold, fontSize: 17),
-              decoration: const InputDecoration(border: InputBorder.none, isDense: true),
+              decoration: InputDecoration(
+                border: InputBorder.none,
+                isDense: true,
+                hintText: '0.0',
+                hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.normal),
+              ),
             ),
           ),
         const SizedBox(width: 4),
