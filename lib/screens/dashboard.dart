@@ -28,12 +28,12 @@ class _BodyCompositionsDashboardState extends State<BodyCompositionsDashboard> {
   void initState() {
     super.initState();
     // 여기서 딱 한 번만 API 호출
-    _futureDashboard = apiService.getDashboard(1); // TODO: 실제 로그인 유저 id로 교체
+    _futureDashboard = apiService.getDashboard(30001); // TODO: 실제 로그인 유저 id로 교체
   }
 
   void _refreshDashboard() {
     setState(() {
-      _futureDashboard = apiService.getDashboard(1); // TODO: 실제 로그인 유저 id로 교체
+      _futureDashboard = apiService.getDashboard(30001); // TODO: 실제 로그인 유저 id로 교체
     });
   }
 

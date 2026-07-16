@@ -14,7 +14,7 @@ class _BodyCompositionInputScreenState extends State<BodyCompositionInputScreen>
   final ApiService _apiService = ApiService();
 
   // TODO: 로그인/전역 상태 연동되면 실제 로그인한 사용자의 memberId로 교체할 것
-  static const int _memberId = 1;
+  static const int _memberId = 30001;
 
   // 선택된 날짜 상태 (기본값: 오늘)
   DateTime _selectedDate = DateTime.now();
@@ -113,7 +113,6 @@ class _BodyCompositionInputScreenState extends State<BodyCompositionInputScreen>
         memberId: _memberId, 
         measureDate: _isoDate, 
         weight: weight,
-        height: height,
         muscleMass: muscleMass,
         fatMass: fatMass,
       );
@@ -182,7 +181,6 @@ class _BodyCompositionInputScreenState extends State<BodyCompositionInputScreen>
               child: Column(
                 children: [
                   _buildInputRow('⚖️', '체중', _weightController, 'kg'),
-                  _buildInputRow('📏', '키', _heightController, 'cm'),
                 ],
               ),
             ),
