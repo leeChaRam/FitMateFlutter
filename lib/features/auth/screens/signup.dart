@@ -1,3 +1,4 @@
+import 'package:fitmate_flutter/features/auth/services/auth_api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:fitmate_flutter/widgets/fc_widgets.dart';
 import 'package:fitmate_flutter/theme/FitMateTheme.dart';
@@ -10,6 +11,7 @@ class SignupScreen extends StatefulWidget {
 }
 
 class _SignupScreenState extends State<SignupScreen> {
+  final AuthApiService _authApiService = AuthApiService();
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _passwordConfirmCtrl = TextEditingController();
@@ -19,13 +21,29 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _agree = false;
   bool _isLoading = false;
 
+  // 이메일 형식 검사 (예: someone@example.com)
+  final RegExp _emailPattern = RegExp(r'^[\w.+\-]+@[\w\-]+(\.[\w\-]+)*\.[a-zA-Z]{2,}$');
+
+  // 비밀번호 정책: 영문 + 숫자 + 특수문자 모두 포함, 8~20자
+  final RegExp _passwordPattern = RegExp(
+    r'^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_\-+=\[\]{}|;:,.<>/?]).{8,20}$',
+  );
+
+  bool get _emailInvalid =>
+      _emailCtrl.text.isNotEmpty && !_emailPattern.hasMatch(_emailCtrl.text.trim());
+  
+  bool get _passwordInvalid =>
+      _passwordCtrl.text.isNotEmpty && !_passwordPattern.hasMatch(_passwordCtrl.text);
+
   bool get _confirmMismatch =>
       _passwordConfirmCtrl.text.isNotEmpty &&
       _passwordCtrl.text != _passwordConfirmCtrl.text;
 
   bool get _signupDisabled {
     return _emailCtrl.text.isEmpty ||
+        _emailInvalid ||
         _passwordCtrl.text.isEmpty ||
+        _passwordInvalid ||
         _passwordConfirmCtrl.text.isEmpty ||
         _confirmMismatch ||
         _nameCtrl.text.isEmpty ||
@@ -53,11 +71,27 @@ class _SignupScreenState extends State<SignupScreen> {
     if (picked != null) setState(() => _birth = picked);
   }
 
+  /// DateTime -> 'yyyy-MM-dd' 문자열 (백엔드 LocalDate 형식과 동일)
+  String _formatDate(DateTime date) {
+    final y = date.year.toString().padLeft(4, '0');
+    final m = date.month.toString().padLeft(2, '0');
+    final d = date.day.toString().padLeft(2, '0');
+    return '$y-$m-$d';
+  }
+  
   Future<void> _submit() async {
     setState(() => _isLoading = true);
+
+    setState(() => _isLoading = true);
     try {
-      // TODO: 실제 회원가입 API 호출로 교체하세요.
-      await Future.delayed(const Duration(milliseconds: 800)); // 임시 목업
+      await _authApiService.join(
+        email: _emailCtrl.text.trim(),
+        password: _passwordCtrl.text,
+        checkPassword: _passwordConfirmCtrl.text,
+        name: _nameCtrl.text.trim(),
+        birthDate: _formatDate(_birth!),
+        height: double.parse(_heightCtrl.text.trim()),
+      );
 
       if (!mounted) return;
 
@@ -78,6 +112,17 @@ class _SignupScreenState extends State<SignupScreen> {
 
   void _goLogin() {
     Navigator.of(context).pop();
+  }
+
+  /// 그라디언트 배경 위에서도 잘 보이도록 danger 색을 흰색과 살짝 섞은 에러 문구
+  Widget _errorText(String message) {
+    return Text(
+      message,
+      style: TextStyle(
+        color: Color.lerp(FitMateTheme.colorDanger, Colors.white, 0.35),
+        fontSize: 13,
+      ),
+    );
   }
 
   @override
@@ -122,20 +167,26 @@ class _SignupScreenState extends State<SignupScreen> {
                         style: TextStyle(color: Colors.white70, fontSize: 15),
                       ),
                       const SizedBox(height: 20),
-                      FCTextField(
+                      FCTextField(       // TODO : 이메일 검증을 해야하지 않을까?
                         label: '이메일',
                         controller: _emailCtrl,
                         hint: 'you@email.com',
                         keyboardType: TextInputType.emailAddress,
                         onChanged: () => setState(() {}),
+                        errorText: _emailInvalid
+                            ? _errorText('올바른 이메일 형식이 아니에요')
+                            : null,
                       ),
                       const SizedBox(height: 16),
                       FCTextField(
-                        label: '비밀번호',
+                        label: '비밀번호',     
                         controller: _passwordCtrl,
-                        hint: '영문, 숫자 포함 8자 이상',
+                        hint: '영문, 숫자, 특수문자 포함 8~20자',
                         obscure: true,
                         onChanged: () => setState(() {}),
+                        errorText: _passwordInvalid
+                            ? _errorText('영문, 숫자, 특수문자를 모두 포함한 8~20자여야 해요')
+                            : null,
                       ),
                       const SizedBox(height: 16),
                       FCTextField(
@@ -145,17 +196,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         obscure: true,
                         onChanged: () => setState(() {}),
                         errorText: _confirmMismatch
-                            ? Text(
-                                '비밀번호가 일치하지 않아요',
-                                style: TextStyle(
-                                  color: Color.lerp(
-                                    FitMateTheme.colorDanger,
-                                    Colors.white,
-                                    0.35,
-                                  ),
-                                  fontSize: 13,
-                                ),
-                              )
+                            ? _errorText('비밀번호가 일치하지 않아요')
                             : null,
                       ),
                       const SizedBox(height: 16),
@@ -229,7 +270,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           const SizedBox(width: 8),
                           const Expanded(
                             child: Text(
-                              '이용약관 및 개인정보 처리방침에 동의합니다',
+                              '이용약관 및 개인정보 처리방침에 동의합니다', 
                               style: TextStyle(color: Colors.white70, fontSize: 15),
                             ),
                           ),
