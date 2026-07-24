@@ -68,4 +68,6 @@ class ApiService{
       throw Exception('체성분 기록 저장에 실패했습니다: $e');
     }
   }
+
+  
 }

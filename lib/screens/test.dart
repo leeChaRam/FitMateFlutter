@@ -1,140 +1,346 @@
-import 'package:dio/dio.dart';
-import 'package:fitmate_flutter/models/body_info.dart';
-import 'package:fitmate_flutter/models/dashboard_response.dart';
+import 'package:flutter/material.dart';
+import 'package:fitmate_flutter/widgets/fc_widgets.dart';
+import 'package:fitmate_flutter/theme/FitMateTheme.dart';
+import 'package:fitmate_flutter/features/auth/services/auth_api_service.dart';
 
-// ============================================================
-// ApiService
-// ------------------------------------------------------------
-// 백엔드 개발 관점으로 비유하면: 이 클래스는 프론트엔드에서
-// 쓰는 "HTTP Client Wrapper" 혹은 백엔드의 Feign Client / RestTemplate
-// 래퍼 클래스와 비슷한 역할입니다.
-// 즉, "서버랑 통신하는 로직"을 화면(UI) 코드에서 분리해서
-// 한 군데 모아두는 계층이에요. (Repository 패턴이랑 비슷)
-//
-// 화면(위젯)은 이 클래스의 메서드만 호출하면 되고,
-// "어떤 URL로, 어떤 메서드로 요청하는지"는 몰라도 됩니다.
-// (관심사 분리 = Separation of Concerns, 백엔드에서도 똑같이 하시죠)
-// ============================================================
-class ApiService{
+class SignupScreen extends StatefulWidget {
+  const SignupScreen({super.key});
 
-  // Dio는 Flutter/Dart에서 가장 많이 쓰는 HTTP 클라이언트 라이브러리입니다.
-  // Java의 RestTemplate / WebClient, 혹은 Node의 axios랑 같은 역할이라고
-  // 생각하시면 됩니다.
-  final Dio _dio = Dio(BaseOptions(
-    // baseUrl: 모든 요청 앞에 자동으로 붙는 공통 주소.
-    // 즉 _dio.get('/api/body-info') 를 호출하면
-    // 실제로는 http://localhost:8080/api/body-info 로 요청이 나갑니다.
-    // 💡 에뮬레이터면 10.0.2.2, 실기기(폰) 테스트나 웹이면 실제 백엔드 IP 주소를 적어주세요.
-    baseUrl: 'http://localhost:8080', 
-    connectTimeout: const Duration(seconds: 5), // 연결 시도 제한시간
-    receiveTimeout: const Duration(seconds: 5), // 응답 수신 제한시간
-  ));
+  @override
+  State<SignupScreen> createState() => _SignupScreenState();
+}
 
-  // ------------------------------------------------------------
-  // GET /api/body-info/recent?memberId=xxx
-  // ------------------------------------------------------------
-  // 최근 체성분 기록 리스트 가져오기 리퀘스트
-  //
-  // Future<List<BodyInfoModel>> : 이 함수는 "비동기로" 실행되고,
-  // 결과값으로 List<BodyInfoModel>을 (나중에) 돌려준다는 뜻입니다.
-  // 백엔드의 Java CompletableFuture<List<BodyInfoDto>> 랑 개념이 같습니다.
-  // 네트워크 요청은 시간이 걸리니까 "끝날 때까지 기다렸다가" 결과를
-  // 돌려주는 방식이고, 호출하는 쪽에서는 await 키워드로 기다립니다.
-  Future<List<BodyInfoModel>> getRescentBodyInfos(int memberId) async {
+class _SignupScreenState extends State<SignupScreen> {
+  final AuthApiService _authApiService = AuthApiService();
+  final _emailCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+  final _passwordConfirmCtrl = TextEditingController();
+  final _nameCtrl = TextEditingController();
+  final _heightCtrl = TextEditingController();
+  DateTime? _birth;
+  bool _agree = false;
+  bool _isLoading = false;
+
+  // 이메일 형식 검사 (예: someone@example.com, someone@school.ac.kr)
+  // 도메인에 점(.)이 여러 개 들어가는 다단계 도메인(.ac.kr, .co.kr 등)도 허용합니다.
+  final RegExp _emailPattern =
+      RegExp(r'^[\w.+\-]+@[\w\-]+(\.[\w\-]+)*\.[a-zA-Z]{2,}$');
+
+  // 비밀번호 정책: 영문 + 숫자 + 특수문자 모두 포함, 8~20자
+  // (백엔드 MemberJoinRequest / MemberService의 정책과 동일하게 맞췄습니다)
+  final RegExp _passwordPattern = RegExp(
+    r'^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_\-+=\[\]{}|;:,.<>/?]).{8,20}$',
+  );
+
+  bool get _emailInvalid =>
+      _emailCtrl.text.isNotEmpty && !_emailPattern.hasMatch(_emailCtrl.text.trim());
+
+  bool get _passwordInvalid =>
+      _passwordCtrl.text.isNotEmpty && !_passwordPattern.hasMatch(_passwordCtrl.text);
+
+  bool get _confirmMismatch =>
+      _passwordConfirmCtrl.text.isNotEmpty &&
+      _passwordCtrl.text != _passwordConfirmCtrl.text;
+
+  bool get _heightInvalid {
+    final text = _heightCtrl.text.trim();
+    if (text.isEmpty) return false; // 비어있는 건 '_signupDisabled'에서 별도 체크
+    final parsed = double.tryParse(text);
+    return parsed == null || parsed <= 0;
+  }
+
+  bool get _signupDisabled {
+    return _emailCtrl.text.isEmpty ||
+        _emailInvalid ||
+        _passwordCtrl.text.isEmpty ||
+        _passwordInvalid ||
+        _passwordConfirmCtrl.text.isEmpty ||
+        _confirmMismatch ||
+        _nameCtrl.text.isEmpty ||
+        _birth == null ||
+        _heightCtrl.text.trim().isEmpty ||
+        _heightInvalid ||
+        !_agree;
+  }
+
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    _passwordCtrl.dispose();
+    _passwordConfirmCtrl.dispose();
+    _nameCtrl.dispose();
+    _heightCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickBirth() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _birth ?? DateTime(now.year - 20, now.month, now.day),
+      firstDate: DateTime(1930),
+      lastDate: now,
+    );
+    if (picked != null) setState(() => _birth = picked);
+  }
+
+  /// DateTime -> 'yyyy-MM-dd' 문자열 (백엔드 LocalDate 형식과 동일)
+  String _formatDate(DateTime date) {
+    final y = date.year.toString().padLeft(4, '0');
+    final m = date.month.toString().padLeft(2, '0');
+    final d = date.day.toString().padLeft(2, '0');
+    return '$y-$m-$d';
+  }
+
+  Future<void> _submit() async {
+    if (_birth == null) return; // _signupDisabled에서 이미 막고 있지만 방어적으로 체크
+
+    setState(() => _isLoading = true);
     try {
-      // 주소창 뒤에 Query Parameter (?memberId=1) 형태로 전달 
-      final response = await _dio.get(
-        '/api/body-info/recent',
-        queryParameters: {'memberId': memberId},
+      await _authApiService.join(
+        email: _emailCtrl.text.trim(),
+        password: _passwordCtrl.text,
+        checkPassword: _passwordConfirmCtrl.text,
+        name: _nameCtrl.text.trim(),
+        birthDate: _formatDate(_birth!),
+        height: double.parse(_heightCtrl.text.trim()),
       );
-      
-      if (response.statusCode == 200) {
-        // response.data는 서버가 준 JSON을 Dio가 이미 List/Map 형태로
-        // 자동 파싱해준 것입니다. (Jackson이 자동으로 역직렬화해주는 것과 비슷)
-        List<dynamic> data = response.data;
 
-        // JSON 리스트(각 원소는 Map<String, dynamic>)를
-        // 우리가 다루기 편한 Dart 객체(BodyInfoModel)로 하나씩 변환합니다.
-        // .map()은 자바 스트림의 .map()이랑 완전히 동일한 개념이에요.
-        // fromJson()은 BodyInfoModel 클래스 안에 정의된 "JSON → 객체" 변환 생성자입니다.
-        return data.map((json) => BodyInfoModel.fromJson(json)).toList();
-      } else {
-        throw Exception('서버 응답 에러: ${response.statusCode}');
-      }
+      if (!mounted) return;
+
+      // 가입 성공 -> 로그인 화면으로 돌아가서 로그인 하도록 유도
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('가입이 완료됐어요. 로그인해주세요.')),
+      );
+      Navigator.of(context).pop();
     } catch (e) {
-      // 네트워크 에러, 파싱 에러 등을 여기서 한 번에 잡아서
-      // 사람이 이해하기 쉬운 메시지로 다시 던져줍니다.
-      throw Exception('데이터를 불러오는데 실패했습니다: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  // ------------------------------------------------------------
-  // GET /api/body-info/dashboard?memberId=xxx
-  // ------------------------------------------------------------
-  //Dashboard 데이터 가져오기 request
-  Future<DashboardResponse> getDashboard(int memberId) async {
-    final response = await _dio.get(
-      '/api/body-info/dashboard',
-      queryParameters: {'memberId': memberId},);
-    return DashboardResponse.fromJson(response.data);
+  void _goLogin() {
+    Navigator.of(context).pop();
   }
 
-  // ------------------------------------------------------------
-  // POST /api/body-info?memberId=xxx
-  // ------------------------------------------------------------
-  // 체성분 기록 저장 request
-  //
-  // 파라미터 앞에 `required`가 붙은 건 "이 값 없으면 컴파일 에러"라는
-  // 뜻입니다 (Java의 @NotNull 같은 컴파일타임 강제라고 보시면 됩니다).
-  // `{ }`로 감싼 파라미터들은 "이름을 붙여서 호출"하는 named parameter
-  // 문법입니다. 예: postBodyInfo(memberId: 1, weight: 68.4, ...)
-  // 순서 안 지켜도 되고, 호출하는 쪽 코드만 봐도 각 값이 뭔지 바로
-  // 보여서 가독성이 좋아집니다. (Java엔 없는 Dart/Kotlin 스타일 문법)
-  //
-  // double? 처럼 타입 뒤에 ?가 붙은 건 "null이 허용된다"는 뜻입니다.
-  // 반대로 double(물음표 없음)은 절대 null이 될 수 없습니다.
-  // Java의 @Nullable / Optional<Double>과 비슷한 역할을,
-  // Dart는 타입 시스템 차원에서 강제합니다 (null safety).
-  Future<void> postBodyInfo({
-    required int memberId,
-    required String measureDate, // yyyy-MM-dd 형식 문자열. 서버 LocalDate와 매칭됨
-    required double weight,
-    double? height,
-    double? muscleMass,
-    double? fatMass,
-    String? memo,
-  }) async {
-    try {
-      final response = await _dio.post(
-        '/api/body-info',
-        // data: POST/PUT 요청의 "본문(body)"에 실릴 내용.
-        // Dio가 이 Map을 자동으로 JSON 문자열로 직렬화해서 보내줍니다.
-        // (Jackson이 @RequestBody DTO를 JSON으로 바꿔주는 것의 반대 과정)
-        //
-        // 여기 key 이름(memberId, measureDate, weight, ...)은 백엔드
-        // @RequestBody DTO의 필드명과 정확히 일치해야 Jackson이 매핑할 수 있습니다.
-        // memberId도 리소스를 생성하는 데 필요한 데이터이므로 쿼리 파라미터가
-        // 아니라 body 안에 함께 담아 보냅니다. (POST/PUT처럼 리소스를
-        // 생성/수정하는 요청은 body에, GET처럼 단순 조회 필터링은
-        // 쿼리 파라미터에 담는 게 일반적인 REST 관례입니다)
-        data: {
-          'memberId': memberId,
-          'measureDate': measureDate,
-          'weight': weight,
-          'height': height,
-          'muscleMass': muscleMass,
-          'fatMass': fatMass,
-          'memo': memo,
-        },
-      );
+  /// 그라디언트 배경 위에서도 잘 보이도록 danger 색을 흰색과 살짝 섞은 에러 문구
+  Widget _errorText(String message) {
+    return Text(
+      message,
+      style: TextStyle(
+        color: Color.lerp(FitMateTheme.colorDanger, Colors.white, 0.35),
+        fontSize: 13,
+      ),
+    );
+  }
 
-      // 백엔드에서 @PostMapping 성공 시 보통 200(OK) 또는 201(Created)을
-      // 반환하니 둘 다 성공으로 취급합니다.
-      if (response.statusCode != 200 && response.statusCode != 201) {
-        throw Exception('서버 응답 에러: ${response.statusCode}');
-      }
-    } catch (e) {
-      throw Exception('체성분 기록 저장에 실패했습니다: $e');
-    }
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: fcGradientBackground(),
+        child: SafeArea(
+          child: Column(
+            children: [
+              // 상단 바
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: _goLogin,
+                      icon: const Icon(Icons.chevron_left, color: Colors.white, size: 28),
+                    ),
+                    const Text(
+                      '회원가입',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 18,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // 스크롤 폼
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'FitMate에서 함께할 프로필을 만들어요',
+                        style: TextStyle(color: Colors.white70, fontSize: 15),
+                      ),
+                      const SizedBox(height: 20),
+                      FCTextField(
+                        label: '이메일',
+                        controller: _emailCtrl,
+                        hint: 'you@email.com',
+                        keyboardType: TextInputType.emailAddress,
+                        onChanged: () => setState(() {}),
+                        errorText: _emailInvalid
+                            ? _errorText('올바른 이메일 형식이 아니에요')
+                            : null,
+                      ),
+                      const SizedBox(height: 16),
+                      FCTextField(
+                        label: '비밀번호',
+                        controller: _passwordCtrl,
+                        hint: '영문, 숫자, 특수문자 포함 8~20자',
+                        obscure: true,
+                        onChanged: () => setState(() {}),
+                        errorText: _passwordInvalid
+                            ? _errorText('영문, 숫자, 특수문자를 모두 포함한 8~20자여야 해요')
+                            : null,
+                      ),
+                      const SizedBox(height: 16),
+                      FCTextField(
+                        label: '비밀번호 확인',
+                        controller: _passwordConfirmCtrl,
+                        hint: '비밀번호 다시 입력',
+                        obscure: true,
+                        onChanged: () => setState(() {}),
+                        errorText: _confirmMismatch
+                            ? _errorText('비밀번호가 일치하지 않아요')
+                            : null,
+                      ),
+                      const SizedBox(height: 16),
+                      FCTextField(
+                        label: '이름(닉네임)',
+                        controller: _nameCtrl,
+                        hint: 'FitMate에서 사용할 이름',
+                        onChanged: () => setState(() {}),
+                      ),
+                      const SizedBox(height: 16),
+                      // 생년월일
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            '생년월일',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          InkWell(
+                            borderRadius: BorderRadius.circular(FitMateTheme.radiusSm),
+                            onTap: _pickBirth,
+                            child: Container(
+                              height: 48,
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.16),
+                                borderRadius: BorderRadius.circular(FitMateTheme.radiusSm),
+                              ),
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                _birth == null
+                                    ? 'YYYY-MM-DD'
+                                    : '${_birth!.year}-${_birth!.month.toString().padLeft(2, '0')}-${_birth!.day.toString().padLeft(2, '0')}',
+                                style: TextStyle(
+                                  color: _birth == null ? Colors.white54 : Colors.white,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      FCTextField(
+                        label: '키 (cm)',
+                        controller: _heightCtrl,
+                        hint: '170',
+                        keyboardType: TextInputType.number,
+                        onChanged: () => setState(() {}),
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: Checkbox(
+                              value: _agree,
+                              onChanged: (v) => setState(() => _agree = v ?? false),
+                              fillColor: WidgetStateProperty.resolveWith((states) => Colors.white),
+                              checkColor: FitMateTheme.colorPrimary,
+                              side: const BorderSide(color: Colors.white),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Text(
+                              '이용약관 및 개인정보 처리방침에 동의합니다',
+                              style: TextStyle(color: Colors.white70, fontSize: 15),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // 하단 고정 영역
+              Container(
+                padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
+                decoration: BoxDecoration(
+                  border: Border(top: BorderSide(color: Colors.white.withOpacity(0.24))),
+                ),
+                child: Column(
+                  children: [
+                    FCPrimaryButton(
+                      label: '가입하기',
+                      onPressed: _signupDisabled ? null : _submit,
+                      isLoading: _isLoading,
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text(
+                          '이미 계정이 있으신가요?',
+                          style: TextStyle(color: Colors.white70, fontSize: 15),
+                        ),
+                        const SizedBox(width: 6),
+                        TextButton(
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: const Size(0, 0),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          onPressed: _goLogin,
+                          child: const Text(
+                            '로그인',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

@@ -1,7 +1,7 @@
-import 'package:fitmate_flutter/features/auth/services/auth_api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:fitmate_flutter/widgets/fc_widgets.dart';
 import 'package:fitmate_flutter/theme/FitMateTheme.dart';
+import 'package:fitmate_flutter/features/auth/services/auth_api_service.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -21,23 +21,33 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _agree = false;
   bool _isLoading = false;
 
-  // 이메일 형식 검사 (예: someone@example.com)
-  final RegExp _emailPattern = RegExp(r'^[\w.+\-]+@[\w\-]+(\.[\w\-]+)*\.[a-zA-Z]{2,}$');
+  // 이메일 형식 검사 (예: someone@example.com, someone@school.ac.kr)
+  // 도메인에 점(.)이 여러 개 들어가는 다단계 도메인(.ac.kr, .co.kr 등)도 허용합니다.
+  final RegExp _emailPattern =
+      RegExp(r'^[\w.+\-]+@[\w\-]+(\.[\w\-]+)*\.[a-zA-Z]{2,}$');
 
   // 비밀번호 정책: 영문 + 숫자 + 특수문자 모두 포함, 8~20자
+  // (백엔드 MemberJoinRequest / MemberService의 정책과 동일하게 맞췄습니다)
   final RegExp _passwordPattern = RegExp(
     r'^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_\-+=\[\]{}|;:,.<>/?]).{8,20}$',
   );
 
   bool get _emailInvalid =>
       _emailCtrl.text.isNotEmpty && !_emailPattern.hasMatch(_emailCtrl.text.trim());
-  
+
   bool get _passwordInvalid =>
       _passwordCtrl.text.isNotEmpty && !_passwordPattern.hasMatch(_passwordCtrl.text);
 
   bool get _confirmMismatch =>
       _passwordConfirmCtrl.text.isNotEmpty &&
       _passwordCtrl.text != _passwordConfirmCtrl.text;
+
+  bool get _heightInvalid {
+    final text = _heightCtrl.text.trim();
+    if (text.isEmpty) return false; // 비어있는 건 '_signupDisabled'에서 별도 체크
+    final parsed = double.tryParse(text);
+    return parsed == null || parsed <= 0;
+  }
 
   bool get _signupDisabled {
     return _emailCtrl.text.isEmpty ||
@@ -47,6 +57,9 @@ class _SignupScreenState extends State<SignupScreen> {
         _passwordConfirmCtrl.text.isEmpty ||
         _confirmMismatch ||
         _nameCtrl.text.isEmpty ||
+        _birth == null ||
+        _heightCtrl.text.trim().isEmpty ||
+        _heightInvalid ||
         !_agree;
   }
 
@@ -78,13 +91,13 @@ class _SignupScreenState extends State<SignupScreen> {
     final d = date.day.toString().padLeft(2, '0');
     return '$y-$m-$d';
   }
-  
+
   Future<void> _submit() async {
-    setState(() => _isLoading = true);
+    if (_birth == null) return; // _signupDisabled에서 이미 막고 있지만 방어적으로 체크
 
     setState(() => _isLoading = true);
     try {
-      await _authApiService.join(
+      final message = await _authApiService.join(
         email: _emailCtrl.text.trim(),
         password: _passwordCtrl.text,
         checkPassword: _passwordConfirmCtrl.text,
@@ -95,15 +108,15 @@ class _SignupScreenState extends State<SignupScreen> {
 
       if (!mounted) return;
 
-      // 가입 성공 -> 로그인 화면으로 돌아가서 로그인 하도록 유도
+      // 가입 성공 -> 서버가 준 메시지를 보여주고 로그인 화면으로 돌아가기
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('가입이 완료됐어요. 로그인해주세요.')),
+        SnackBar(content: Text(message)),
       );
       Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('가입에 실패했어요. 다시 시도해주세요.')),
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -167,7 +180,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         style: TextStyle(color: Colors.white70, fontSize: 15),
                       ),
                       const SizedBox(height: 20),
-                      FCTextField(       // TODO : 이메일 검증을 해야하지 않을까?
+                      FCTextField(
                         label: '이메일',
                         controller: _emailCtrl,
                         hint: 'you@email.com',
@@ -179,7 +192,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       ),
                       const SizedBox(height: 16),
                       FCTextField(
-                        label: '비밀번호',     
+                        label: '비밀번호',
                         controller: _passwordCtrl,
                         hint: '영문, 숫자, 특수문자 포함 8~20자',
                         obscure: true,
@@ -270,7 +283,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           const SizedBox(width: 8),
                           const Expanded(
                             child: Text(
-                              '이용약관 및 개인정보 처리방침에 동의합니다', 
+                              '이용약관 및 개인정보 처리방침에 동의합니다',
                               style: TextStyle(color: Colors.white70, fontSize: 15),
                             ),
                           ),
