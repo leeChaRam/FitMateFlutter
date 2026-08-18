@@ -1,9 +1,37 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:fitmate_flutter/network/api_client.dart';
+import 'package:fitmate_flutter/core/network/api_client.dart';
+import 'package:fitmate_flutter/core/storage/token_storage.dart';
 
 class AuthApiService {
   final Dio _dio = ApiClient.dio;
+
+  /// 로그인 API 호출 (POST /api/members/login), 성공 시 JWT를 저장소에 저장합니다.
+  Future<void> login({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/auth/login',
+        data: {
+          'email': email,
+          'password': password,
+        },
+      );
+
+      final data = response.data;
+      final token = data is Map<String, dynamic> ? data['token'] as String? : null;
+      if (token == null || token.isEmpty) {
+        throw Exception('로그인 응답에 토큰이 없습니다.');
+      }
+
+      await TokenStorage.saveToken(token);
+    } on DioException catch (e) {
+      final serverMessage = ApiClient.extractErrorMessage(e);
+      throw Exception(serverMessage ?? '로그인에 실패했습니다.');
+    }
+  }
 
   /// 회원가입 API 호출 (POST /api/members/join), 성공 시 새로 생성된 회원의 id를 반환합니다.
   Future<String> join({
@@ -16,7 +44,7 @@ class AuthApiService {
   }) async {
     try {
       final response = await _dio.post(
-        '/api/members/join',
+        '/api/member/join',
         data: {
           'email': email,
           'password': password,

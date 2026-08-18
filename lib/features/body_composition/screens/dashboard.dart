@@ -1,8 +1,8 @@
-import 'package:fitmate_flutter/models/dashboard_response.dart';
+import 'package:fitmate_flutter/features/body_composition/models/dashboard_response.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:fitmate_flutter/theme/FitMateTheme.dart';
-import 'package:fitmate_flutter/screens/input_screen.dart';
+import 'package:fitmate_flutter/features/body_composition/screens/input_screen.dart';
 import 'package:fitmate_flutter/services/api_service.dart';
 
 // ============================================================

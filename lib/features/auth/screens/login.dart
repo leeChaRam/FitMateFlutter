@@ -2,10 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fitmate_flutter/widgets/fc_widgets.dart';
 import 'package:fitmate_flutter/features/navigation/main_navigation.dart';
 import 'package:fitmate_flutter/features/auth/screens/signup.dart';
-
-
-// TODO: 실제 로그인 API를 쓰는 서비스로 교체하세요.
-// import 'package:fitmate_flutter/services/api_service.dart';
+import 'package:fitmate_flutter/features/auth/services/auth_api_service.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -17,7 +14,7 @@ class Login extends StatefulWidget {
 class _LoginState extends State<Login> {
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
-  // final ApiService _apiService = ApiService();
+  final AuthApiService _authApiService = AuthApiService();
 
   bool _isLoading = false;
 
@@ -40,10 +37,7 @@ class _LoginState extends State<Login> {
     setState(() => _isLoading = true);
 
     try {
-      // TODO: 실제 로그인 API 호출로 교체하세요. 예:
-      // final result = await _apiService.login(email, password);
-      // 성공하면 result.userId, result.token 등을 로컬(SharedPreferences 등)에 저장.
-      await Future.delayed(const Duration(milliseconds: 800)); // 임시 목업
+      await _authApiService.login(email: email, password: password);
 
       if (!mounted) return;
 
@@ -54,7 +48,7 @@ class _LoginState extends State<Login> {
       );
     } catch (e) {
       if (!mounted) return;
-      _showError('로그인에 실패했어요. 이메일/비밀번호를 확인해주세요.');
+      _showError(e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

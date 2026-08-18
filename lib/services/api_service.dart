@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
-import 'package:fitmate_flutter/models/body_info.dart';
-import 'package:fitmate_flutter/models/dashboard_response.dart';
+import 'package:fitmate_flutter/features/body_composition/models/body_info.dart';
+import 'package:fitmate_flutter/features/body_composition/models/dashboard_response.dart';
 
 class ApiService{
   final Dio _dio = Dio(BaseOptions(
@@ -68,6 +68,4 @@ class ApiService{
       throw Exception('체성분 기록 저장에 실패했습니다: $e');
     }
   }
-
-  
 }

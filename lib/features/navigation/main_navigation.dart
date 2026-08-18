@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fitmate_flutter/theme/FitMateTheme.dart';
-import 'package:fitmate_flutter/screens/dashboard.dart';
+import 'package:fitmate_flutter/features/body_composition/screens/dashboard.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
