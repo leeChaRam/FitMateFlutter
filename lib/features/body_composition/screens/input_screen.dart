@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fitmate_flutter/theme/FitMateTheme.dart';
 import 'package:fitmate_flutter/screens/privacy_sheet.dart';
-import 'package:fitmate_flutter/services/api_service.dart';
+import 'package:fitmate_flutter/features/body_composition/services/body_api_service.dart';
 
 class BodyCompositionInputScreen extends StatefulWidget {
   const BodyCompositionInputScreen({super.key});
@@ -11,10 +11,7 @@ class BodyCompositionInputScreen extends StatefulWidget {
 }
 
 class _BodyCompositionInputScreenState extends State<BodyCompositionInputScreen> {
-  final ApiService _apiService = ApiService();
-
-  // TODO: 로그인/전역 상태 연동되면 실제 로그인한 사용자의 memberId로 교체할 것
-  static const int _memberId = 30001;
+  final BodyApiService _apiService = BodyApiService();
 
   // 선택된 날짜 상태 (기본값: 오늘)
   DateTime _selectedDate = DateTime.now();
@@ -110,8 +107,7 @@ class _BodyCompositionInputScreenState extends State<BodyCompositionInputScreen>
 
     try{
       await _apiService.postBodyInfo(
-        memberId: _memberId, 
-        measureDate: _isoDate, 
+        measureDate: _isoDate,
         weight: weight,
         muscleMass: muscleMass,
         fatMass: fatMass,

@@ -3,7 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:fitmate_flutter/theme/FitMateTheme.dart';
 import 'package:fitmate_flutter/features/body_composition/screens/input_screen.dart';
-import 'package:fitmate_flutter/services/api_service.dart';
+import 'package:fitmate_flutter/features/body_composition/services/body_api_service.dart';
 
 // ============================================================
 // 대시보드 메인 화면
@@ -21,19 +21,19 @@ class BodyCompositionsDashboard extends StatefulWidget {
   
 
 class _BodyCompositionsDashboardState extends State<BodyCompositionsDashboard> {
-  final ApiService apiService = ApiService();
+  final BodyApiService apiService = BodyApiService();
   late Future<DashboardResponse> _futureDashboard;
 
   @override
   void initState() {
     super.initState();
     // 여기서 딱 한 번만 API 호출
-    _futureDashboard = apiService.getDashboard(30001); // TODO: 실제 로그인 유저 id로 교체
+    _futureDashboard = apiService.getDashboard();
   }
 
   void _refreshDashboard() {
     setState(() {
-      _futureDashboard = apiService.getDashboard(30001); // TODO: 실제 로그인 유저 id로 교체
+      _futureDashboard = apiService.getDashboard();
     });
   }
 
