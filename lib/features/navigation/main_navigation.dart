@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fitmate_flutter/theme/FitMateTheme.dart';
 import 'package:fitmate_flutter/features/body_composition/screens/dashboard.dart';
+import 'package:fitmate_flutter/features/home/screens/home_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -10,10 +11,10 @@ class MainNavigationScreen extends StatefulWidget {
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
-  int _selectedIndex = 1; // HTML 기본 상태인 '내 기록' 탭 활성화
+  int _selectedIndex = 0; // 로그인 후 기본으로 보여줄 '홈' 탭
 
   final List<Widget> _screens = [
-    const Center(child: Text('홈 화면')),
+    const HomeScreen(),
     const BodyCompositionsDashboard(),
     const Center(child: Text('서클 화면')),
     const Center(child: Text('알림 화면')),
