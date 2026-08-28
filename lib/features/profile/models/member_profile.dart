@@ -20,3 +20,41 @@ enum PrivacyScope {
     );
   }
 }
+
+class MemberProfile {
+  final int id;
+  final String email;
+  final String name;
+  final String? introduction;
+  final String? profileImageUrl;
+  final double height;
+  final PrivacyScope weightPrivacy;
+  final PrivacyScope musclePrivacy;
+  final PrivacyScope fatPrivacy;
+
+  const MemberProfile({
+    required this.id,
+    required this.email,
+    required this.name,
+    this.introduction,
+    this.profileImageUrl,
+    required this.height,
+    required this.weightPrivacy,
+    required this.musclePrivacy,
+    required this.fatPrivacy,
+  });
+
+  factory MemberProfile.fromJson(Map<String, dynamic> json) {
+    return MemberProfile(
+      id: json['id'] as int, 
+      email: json['email'] as String ? ?? '',
+      name: json['name'] as String? ?? '', 
+      introduction: json['introduction'] as String?,
+      profileImageUrl: json['profileImageUrl'] as String?,
+      height: (json['height'] as num?)?.toDouble() ?? 0,
+      weightPrivacy: PrivacyScope.fromValue(json['weightPrivacy'] as int?),
+      musclePrivacy: PrivacyScope.fromValue(json['musclePrivacy'] as int?),
+      fatPrivacy: PrivacyScope.fromValue(json['fatPrivacy'] as int?),
+    );
+  }
+}

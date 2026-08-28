@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fitmate_flutter/theme/FitMateTheme.dart';
 import 'package:fitmate_flutter/features/body_composition/screens/dashboard.dart';
 import 'package:fitmate_flutter/features/home/screens/home_screen.dart';
-
+import 'package:fitmate_flutter/features/profile/screens/profile_screen.dart';
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
 
@@ -18,7 +18,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     const BodyCompositionsDashboard(),
     const Center(child: Text('서클 화면')),
     const Center(child: Text('알림 화면')),
-    const Center(child: Text('설정 화면')),
+    const ProfileScreen(),
   ];
 
   @override
