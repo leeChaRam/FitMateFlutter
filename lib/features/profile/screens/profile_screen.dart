@@ -73,10 +73,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           onEdit: () {}, // TODO: 프로필 수정 화면 연결 (다음 단계)
                         ),
 
-                        // 아래 블록 6~7에서 진짜 위젯으로 교체될 임시 텍스트 
-                        Text('체중 공개: ${profile.weightPrivacy.label}'),
-                        Text('근육량 공개: ${profile.musclePrivacy.label}'),
-                        Text('체지방률 공개: ${profile.fatPrivacy.label}'),
+                        const SizedBox(height: 16),
+                        _PrivacySection(
+                          profile: profile,
+                          onTapRow: () {}, // TODO: 공개범위 바텀시트 연결 (다음 단계)
+                        ),
                       ],
                     ),
                   ),
@@ -155,6 +156,88 @@ class _ProfileHeaderCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// 공개 설정 (체중/ 근육량 / 체지방률)
+// 각 행을 누르면 공개 범위 선택 바텀시트가 열린다.
+
+class _PrivacySection extends StatelessWidget {
+  final MemberProfile profile;
+  final VoidCallback onTapRow;
+  const _PrivacySection({required this.profile, required this.onTapRow});
+
+  @override 
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(bottom: 6),
+          child: Text('공개 설정',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.grey)),
+        ),
+        _PrivacyRow(label: '체중', scope: profile.weightPrivacy, onTap: onTapRow),
+        _PrivacyRow(label: '근육량', scope: profile.musclePrivacy, onTap: onTapRow),
+        _PrivacyRow(label: '체지방률', scope: profile.fatPrivacy, onTap: onTapRow),
+      ],
+    );
+  }
+}
+class _PrivacyRow extends StatelessWidget {
+  final String label;
+  final PrivacyScope scope;
+  final VoidCallback onTap;
+
+  const _PrivacyRow({required this.label, required this.scope, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    //공개 범위별 배지 색상
+    late final Color badgeBg;
+    late final Color badgeFg;
+    switch (scope) {
+      case PrivacyScope.onlyMe:
+        badgeBg = Colors.grey.withOpacity(0.12);
+        badgeFg = Colors.grey;
+        break;
+      case PrivacyScope.delta:
+        badgeBg = FitMateTheme.colorPositive.withOpacity(0.12);
+        badgeFg = FitMateTheme.colorPositive;
+        break;
+      case PrivacyScope.group:
+        badgeBg = FitMateTheme.colorPrimary.withOpacity(0.12);
+        badgeFg = FitMateTheme.colorPrimary;
+        break;
+    }
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(FitMateTheme.radiusMd),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 4),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(label, style: TextStyle(fontSize: 16, color: cs.onSurface)),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: badgeBg,
+                borderRadius: BorderRadius.circular(999)
+              ),
+              child: Text(scope.label,
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: badgeFg)),
+            ),
+            const SizedBox(width: 8),
+            Icon(Icons.chevron_right, size: 20, color: cs.outlineVariant),
+          ],
+        )
+      )
     );
   }
 }
