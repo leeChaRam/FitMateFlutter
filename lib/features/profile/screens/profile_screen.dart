@@ -70,14 +70,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       children: [
                         _ProfileHeaderCard(
                           profile: profile,
-                          onEdit: () {}, // TODO: 프로필 수정 화면 연결 (다음 단계)
+                          onEdit: () {}, // TODO: 프로필 수정 화면 (다음 단계)
                         ),
-
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 20),
                         _PrivacySection(
                           profile: profile,
-                          onTapRow: () {}, // TODO: 공개범위 바텀시트 연결 (다음 단계)
+                          onTapRow: () {}, // TODO: 공개범위 바텀시트 (다음 단계)
                         ),
+                        const Divider(height: 32),
+                        _AccountSection(
+                          onChangePassword: () {}, // TODO
+                          onLogout: () {},         // TODO
+                          onWithdraw: () {},       // TODO
+                        ),
+                        const Divider(height: 24),
+                        const _DisabledSection(),
                       ],
                     ),
                   ),
@@ -238,6 +245,110 @@ class _PrivacyRow extends StatelessWidget {
           ],
         )
       )
+    );
+  }
+}
+
+// 계정 관리 (비밀번호 변경, 로그아웃, 회원 탈퇴)
+class _AccountSection extends StatelessWidget {
+  final VoidCallback onChangePassword;
+  final VoidCallback onLogout;
+  final VoidCallback onWithdraw;
+
+  const _AccountSection({
+    required this.onChangePassword,
+    required this.onLogout,
+    required this.onWithdraw,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(bottom: 2),
+          child: Text('계정 관리', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+        ),
+        _AccountRow(label: '비밀번호 변경', onTap: onChangePassword),
+        _AccountRow(label: '로그아웃', onTap: onLogout),
+        _AccountRow(label: '회원 탈퇴', color: FitMateTheme.colorDanger, onTap: onWithdraw),
+      ],
+    );
+  }
+}
+
+class _AccountRow extends StatelessWidget{
+  final String label;
+  final VoidCallback onTap;
+  final Color? color;
+
+  const _AccountRow({required this.label, required this.onTap, this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 4),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(label, style: TextStyle(fontSize: 15, color: color ?? cs.onSurface)),
+            ),
+            Icon(Icons.chevron_right, size: 20, color: cs.outlineVariant),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Phase 2 예정 항목 (비활성, 안내만)
+
+class _DisabledSection extends StatelessWidget {
+  const _DisabledSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: 0.5,
+      child: Column(
+        children: const[
+          _DisabledRow(label: '알림 / 리마인더 설정'),
+          _DisabledRow(label: '운동 관리'),
+        ]
+      ),
+    );
+  }
+}
+
+class _DisabledRow extends StatelessWidget {
+  final String label;
+  const _DisabledRow({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: TextStyle(fontSize: 15, color: cs.onSurface)),
+                const SizedBox(height: 2),
+                const Text('Phase 2에서 제공될 예정이에요',
+                      style: TextStyle(fontSize: 12, color: Colors.grey)),
+              ],
+            ),
+          ),
+          Icon(Icons.chevron_right, size: 20, color: cs.outlineVariant),
+        ],
+      ),
     );
   }
 }
