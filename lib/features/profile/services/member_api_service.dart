@@ -16,4 +16,26 @@ class MemberApiService{
     throw Exception(message ?? '회원 정보를 불러오는데 실패했습니다.');
     }
   }
+
+   // 공개 설정 저장. 세 지표를 한 번에 PUT 하고, 서버가 되돌려준 최신 회원 정보를 반환한다.
+  Future<MemberProfile> updatePrivacy({
+    required PrivacyScope weight,
+    required PrivacyScope muscle,
+    required PrivacyScope fat,
+  }) async {
+    try {
+      final response = await _dio.put(
+        '/api/members/me/privacy',
+        data: {
+          'weightPrivacy': weight.value,
+          'musclePrivacy': muscle.value,
+          'fatPrivacy': fat.value,
+        },
+      );
+      return MemberProfile.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      final message = ApiClient.extractErrorMessage(e);
+      throw Exception(message ?? '공개 설정 저장에 실패했습니다.');
+    }
+  }
 }

@@ -21,6 +21,17 @@ enum PrivacyScope {
   }
 }
 
+// 프로필 '공개 설정'의 세 행 - 어떤 지표를 편집 중인지 구분용 
+enum PrivacyMetric {
+  weight('체중'),
+  muscle('근육량'),
+  fat('체지방률');
+
+  const PrivacyMetric(this.label);
+
+  final String label;
+}
+
 class MemberProfile {
   final int id;
   final String email;

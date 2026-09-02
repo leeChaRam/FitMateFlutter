@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fitmate_flutter/theme/FitMateTheme.dart';
 import 'package:fitmate_flutter/features/profile/models/member_profile.dart';
 import 'package:fitmate_flutter/features/profile/services/member_api_service.dart';
+import 'package:fitmate_flutter/features/profile/widgets/privacy_scope.dart';
 
 // 프로필 화면 (하단 네비게이션 '설정' 탭)
 // 구조 : 상단 타이틀 -> 프로필 카드(사진, 이름, 소개 , 수정 버튼)
@@ -29,6 +30,68 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() {
       _futureProfile = _memberApiService.getMe();
     });
+  }
+  // 지표 → 현재 공개범위
+  PrivacyScope _scopeOf(MemberProfile p, PrivacyMetric m) {
+    switch (m) {
+      case PrivacyMetric.weight:
+        return p.weightPrivacy;
+      case PrivacyMetric.muscle:
+        return p.musclePrivacy;
+      case PrivacyMetric.fat:
+        return p.fatPrivacy;
+    }
+  }
+
+  // 공개범위 시트 열기 -> 저장 -> 화면 갱신
+  Future<void> _editPrivacy(PrivacyMetric metric, MemberProfile profile) async {
+    final current = _scopeOf(profile, metric);
+
+    final picked = await showModalBottomSheet<PrivacyScope>(
+      context: context, 
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(FitMateTheme.radiusXl)),
+      ),
+      builder:  (_) => PrivacyScopeSheet(title: metric.label, current: current),
+    );
+
+    // 취소했거나(=null) 값이 그대로면 아무것도 안함
+    if (!mounted || picked == null || picked == current) return;
+
+    // 세 값을 현재 프로필 기준으로 준비하고, 방금 고른 지표만 교체
+    var weight = profile.weightPrivacy;
+    var muscle = profile.musclePrivacy;
+    var fat = profile.fatPrivacy;
+    switch (metric) {
+      case PrivacyMetric.weight:
+        weight = picked;
+        break;
+      case PrivacyMetric.muscle:
+        muscle = picked;
+        break;
+      case PrivacyMetric.fat:
+        fat = picked;
+        break;
+    }
+
+    try{
+      final updated = await _memberApiService.updatePrivacy(
+        weight: weight, 
+        muscle: muscle, 
+        fat: fat,
+      );
+      if (!mounted) return;
+      setState(() {
+        _futureProfile = Future.value(updated); // 서버가 준 최신 정보로 즉시 갱신
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content:  Text('$e'.replaceFirst('Exception: ', ''))),
+      );
+    }
   }
 
   @override
@@ -75,7 +138,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         const SizedBox(height: 20),
                         _PrivacySection(
                           profile: profile,
-                          onTapRow: () {}, // TODO: 공개범위 바텀시트 (다음 단계)
+                          onEdit: (metric) => _editPrivacy(metric, profile), // TODO: 공개범위 바텀시트 (다음 단계)
                         ),
                         const Divider(height: 32),
                         _AccountSection(
@@ -172,8 +235,9 @@ class _ProfileHeaderCard extends StatelessWidget {
 
 class _PrivacySection extends StatelessWidget {
   final MemberProfile profile;
-  final VoidCallback onTapRow;
-  const _PrivacySection({required this.profile, required this.onTapRow});
+  final void Function(PrivacyMetric metric) onEdit;
+
+  const _PrivacySection({required this.profile, required this.onEdit});
 
   @override 
   Widget build(BuildContext context) {
@@ -185,9 +249,21 @@ class _PrivacySection extends StatelessWidget {
           child: Text('공개 설정',
               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.grey)),
         ),
-        _PrivacyRow(label: '체중', scope: profile.weightPrivacy, onTap: onTapRow),
-        _PrivacyRow(label: '근육량', scope: profile.musclePrivacy, onTap: onTapRow),
-        _PrivacyRow(label: '체지방률', scope: profile.fatPrivacy, onTap: onTapRow),
+        _PrivacyRow(
+          label: '체중', 
+          scope: profile.weightPrivacy, 
+          onTap: () => onEdit(PrivacyMetric.weight),
+        ),
+        _PrivacyRow(
+          label: '근육량', 
+          scope: profile.musclePrivacy, 
+          onTap: () => onEdit(PrivacyMetric.muscle),
+        ),
+        _PrivacyRow(
+          label: '체지방률', 
+          scope: profile.fatPrivacy, 
+          onTap: () => onEdit(PrivacyMetric.fat),
+        ),
       ],
     );
   }
