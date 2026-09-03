@@ -38,4 +38,23 @@ class MemberApiService{
       throw Exception(message ?? '공개 설정 저장에 실패했습니다.');
     }
   }
+
+  //이름 자기소개 수정 응답은 성공 여부만 확인 
+  Future<void> updateBasicInfo({
+    required String name,
+    String? introduction,
+  }) async {
+    try {
+      await _dio.put(
+        '/api/members/me',
+        data: {
+          'name': name,
+          'introduction': introduction,
+        },
+      );
+    } on DioException catch (e) {
+      final message = ApiClient.extractErrorMessage(e);
+      throw Exception(message ?? '프로필 저장에 실패했습니다.');
+    }
+  }
 }
