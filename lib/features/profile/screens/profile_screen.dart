@@ -3,6 +3,8 @@ import 'package:fitmate_flutter/theme/FitMateTheme.dart';
 import 'package:fitmate_flutter/features/profile/models/member_profile.dart';
 import 'package:fitmate_flutter/features/profile/services/member_api_service.dart';
 import 'package:fitmate_flutter/features/profile/widgets/privacy_scope.dart';
+import 'package:fitmate_flutter/features/profile/screens/edit_profile_screen.dart';
+
 
 // 프로필 화면 (하단 네비게이션 '설정' 탭)
 // 구조 : 상단 타이틀 -> 프로필 카드(사진, 이름, 소개 , 수정 버튼)
@@ -94,6 +96,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  // 기본 정보 수정 화면 열기 -> 저장하고 돌아오면 프로필 재조회
+  Future<void> _editProfile(MemberProfile profile) async {
+    final saved = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => EditProfileScreen(profile: profile)),
+    );
+    if (saved == true) {
+      _refresh();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -133,7 +146,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       children: [
                         _ProfileHeaderCard(
                           profile: profile,
-                          onEdit: () {}, // TODO: 프로필 수정 화면 (다음 단계)
+                          onEdit: () => _editProfile(profile),
                         ),
                         const SizedBox(height: 20),
                         _PrivacySection(

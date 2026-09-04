@@ -57,4 +57,26 @@ class MemberApiService{
       throw Exception(message ?? '프로필 저장에 실패했습니다.');
     }
   }
+
+  // 프로필 사진 업로드/교체, 성공 시 서버가 준 새 이미지 URL을 반환한다.
+  // (응답에 회원 정보 전체가 외지만 privacy 형식이 GET /me와 달라, 필요한 URL만 꺼냄)
+  Future<String?> uploadProfileImage({
+    required List<int> bytes,
+    required String filename,
+  }) async {
+    try{
+      final formData = FormData.fromMap({
+        'image': MultipartFile.fromBytes(bytes, filename: filename),
+      });
+      final response = 
+        await _dio.post('/api/members/me/profile-image', data: formData);
+      final data = response.data;
+      return data is Map<String, dynamic>
+        ? data['profileImageUrl'] as String?
+        : null;
+    } on DioException catch (e) {
+      final message = ApiClient.extractErrorMessage(e);
+      throw Exception(message ?? '프로필 사진 업로드에 실패했습니다.');
+    }
+  }
 }
