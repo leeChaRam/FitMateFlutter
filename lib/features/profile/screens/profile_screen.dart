@@ -98,13 +98,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // 기본 정보 수정 화면 열기 -> 저장하고 돌아오면 프로필 재조회
   Future<void> _editProfile(MemberProfile profile) async {
-    final saved = await Navigator.push<bool>(
+    await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => EditProfileScreen(profile: profile)),
     );
-    if (saved == true) {
-      _refresh();
-    }
+    if (!mounted) return;
+    _refresh();
   }
 
   @override
